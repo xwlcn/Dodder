@@ -1,6 +1,7 @@
 package cc.dodder.dhtserver.netty.config;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -28,12 +29,8 @@ import java.util.Set;
 @ConfigurationProperties(prefix = "netty")
 public class NettyConfig {
 
-	@Value("${netty.group.thread.count}")
-	private int groupCount;
-	@Value("${netty.tcp.port}")
+	@Value("${netty.udp.port}")
 	private int udpPort;
-	@Value("${netty.so.keepalive}")
-	private boolean keepAlive;
 	@Value("${netty.so.backlog}")
 	private int backlog;
 	@Value("${netty.so.rcvbuf}")
@@ -63,7 +60,7 @@ public class NettyConfig {
 
 	@Bean(name = "group", destroyMethod = "shutdownGracefully")
 	public EventLoopGroup group() {
-		return new NioEventLoopGroup(groupCount);
+		return new NioEventLoopGroup();
 	}
 
 	@Bean(name = "udpSocketAddress")
@@ -74,7 +71,8 @@ public class NettyConfig {
 	@Bean(name = "udpChannelOptions")
 	public Map<ChannelOption<?>, Object> udpChannelOptions() {
 		Map<ChannelOption<?>, Object> options = new HashMap<ChannelOption<?>, Object>();
-		//options.put(ChannelOption.SO_BACKLOG, backlog);
+		options.put(ChannelOption.SO_BACKLOG, backlog);
+		options.put(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
 		options.put(ChannelOption.SO_RCVBUF, rcvbuf);
 		options.put(ChannelOption.SO_SNDBUF, sndbuf);
 		return options;

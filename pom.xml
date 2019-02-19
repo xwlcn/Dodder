@@ -17,6 +17,7 @@
     </parent>
 
     <modules>
+        <module>dodder-common</module>
         <module>dodder-eureka-server</module>
         <module>dodder-dht-server</module>
         <module>dodder-torrent-download-service</module>

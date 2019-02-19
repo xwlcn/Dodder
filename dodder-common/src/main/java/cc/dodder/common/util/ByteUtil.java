@@ -1,4 +1,4 @@
-package cc.dodder.dhtserver.util;
+package cc.dodder.common.util;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;

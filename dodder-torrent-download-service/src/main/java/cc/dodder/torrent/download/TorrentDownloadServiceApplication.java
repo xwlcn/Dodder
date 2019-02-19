@@ -1,10 +1,8 @@
-package cc.dodder.torrent.download.service;
+package cc.dodder.torrent.download;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
 
-@EnableEurekaClient
 @SpringBootApplication
 public class TorrentDownloadServiceApplication {
 

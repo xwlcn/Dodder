@@ -1,11 +1,11 @@
 package cc.dodder.dhtserver.netty.handler;
 
+import cc.dodder.common.util.ByteUtil;
+import cc.dodder.common.util.NodeIdUtil;
+import cc.dodder.common.util.bencode.BencodingUtils;
 import cc.dodder.dhtserver.netty.DHTServer;
 import cc.dodder.dhtserver.netty.entity.Node;
 import cc.dodder.dhtserver.netty.entity.UniqueBlockingQueue;
-import cc.dodder.dhtserver.util.ByteUtil;
-import cc.dodder.dhtserver.util.NodeIdUtil;
-import cc.dodder.dhtserver.util.bencode.BencodingUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -42,6 +42,9 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 
 		Map<String, ?> map = BencodingUtils.decode(buff);
 
+		if (map == null)
+			return;
+
 		String y = new String((byte[]) map.get("y"));
 
 		if ("q".equals(y)) {            //请求 Queries
@@ -49,10 +52,12 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		} else if ("r".equals(y)) {     //回复 Responses
 			onResponse(map, packet.sender());
 		}
+
 	}
 
 	/**
 	 * 解析查询请求
+	 *
 	 * @param map
 	 * @param sender
 	 */
@@ -83,6 +88,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	/**
 	 * 回复 ping 请求
 	 * Response = {"t":"aa", "y":"r", "r": {"id":"自身节点ID"}}
+	 *
 	 * @param t
 	 * @param sender
 	 */
@@ -97,11 +103,13 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	/**
 	 * 回复 find_node 请求, 由于是模拟的 DHT 节点，所以直接回复一个空的 node 集合即可
 	 * Response = {"t":"aa", "y":"r", "r": {"id":"0123456789abcdefghij", "nodes": "def456..."}}
+	 *
 	 * @param t
 	 * @param sender
 	 */
 	private void responseFindNode(byte[] t, InetSocketAddress sender) {
 		HashMap<String, Object> r = new HashMap<>();
+		r.put("id", DHTServer.SELF_NODE_ID);
 		r.put("nodes", new byte[]{});
 		DatagramPacket packet = createPacket(t, "r", r, sender);
 		dhtServer.sendKRPC(packet);
@@ -111,12 +119,13 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	/**
 	 * 回复 get_peers 请求，必须回复，不然收不到 announce_peer 请求
 	 * Response with closest nodes = {"t":"aa", "y":"r", "r": {"id":"abcdefghij0123456789", "token":"aoeusnth", "nodes": "def456..."}}
+	 *
 	 * @param t
 	 * @param sender
 	 */
 	private void responseGetPeers(byte[] t, byte[] info_hash, InetSocketAddress sender) {
 		HashMap<String, Object> r = new HashMap<>();
-		r.put("token", new byte[] {info_hash[0], info_hash[1]});
+		r.put("token", new byte[]{info_hash[0], info_hash[1]});
 		r.put("nodes", new byte[]{});
 		r.put("id", NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, info_hash));
 		DatagramPacket packet = createPacket(t, "r", r, sender);
@@ -127,16 +136,16 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	/**
 	 * 回复 announce_peer 请求，该请求中包含了对方正在下载的 torrent 的 info_hash 以及 端口号
 	 * Response = {"t":"aa", "y":"r", "r": {"id":"mnopqrstuvwxyz123456"}}
+	 *
 	 * @param t
-	 * @param a
-	 * 请求参数 a：
-	 * {
-	 * 	 "id" : "",
-	 * 	 "implied_port": <0 or 1>,    //为1时表示当前自身的端口就是下载端口
-	 * 	 "info_hash" : "<20-byte infohash of target torrent>",
-	 * 	 "port" : ,
-	 *  "token" : "" //get_peer 中回复的 token，用于检测是否一致
-	 * }
+	 * @param a      请求参数 a：
+	 *               {
+	 *               "id" : "",
+	 *               "implied_port": <0 or 1>,    //为1时表示当前自身的端口就是下载端口
+	 *               "info_hash" : "<20-byte infohash of target torrent>",
+	 *               "port" : ,
+	 *               "token" : "" //get_peer 中回复的 token，用于检测是否一致
+	 *               }
 	 * @param sender
 	 */
 	private void responseAnnouncePeer(byte[] t, Map a, InetSocketAddress sender) {
@@ -155,8 +164,8 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		DatagramPacket packet = createPacket(t, "r", r, sender);
 		dhtServer.sendKRPC(packet);
 		// TODO 将 info_hash 放进消息队列
-		if (info_hash[0] == token[0] && info_hash[1] == token[1]) {    //check token
-			log.error("info_hash[AnnouncePeer] : {} - {}", sender.toString(), ByteUtil.byteArrayToHex(info_hash));
+		if (token.length == 2 && info_hash[0] == token[0] && info_hash[1] == token[1]) {    //check token
+			log.error("info_hash[AnnouncePeer] : {}:{} - {}", sender.getHostString(), port, ByteUtil.byteArrayToHex(info_hash));
 		}
 	}
 
@@ -164,6 +173,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	 * 处理对方响应内容，由于我们只主动给对方发送了 find_node 请求，所以只会收到 find_node 的回复进行解析即可
 	 * 解析出响应的节点列表再次给这些节点发送 find_node 请求，即可无限扩展与新的节点保持通讯（即把自己的节点加入到对方的桶里，
 	 * 欺骗对方让对方给自己发送 announce_peer 请求，这样一来我们就可以抓取 DHT 网络中别人正在下载的种子文件信息）
+	 *
 	 * @param map
 	 * @param sender
 	 */
@@ -185,6 +195,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 
 	/**
 	 * 解析响应内容中的 DHT 节点信息
+	 *
 	 * @param r
 	 */
 	private void resolveNodes(Map r) {
@@ -219,9 +230,10 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 
 	/**
 	 * 发送查询 DHT 节点请求
-	 * @param address   请求地址
-	 * @param nid       请求节点 ID
-	 * @param target    目标查询节点
+	 *
+	 * @param address 请求地址
+	 * @param nid     请求节点 ID
+	 * @param target  目标查询节点
 	 */
 	private void findNode(InetSocketAddress address, byte[] nid, byte[] target) {
 		HashMap<String, Object> map = new HashMap<>();
@@ -234,6 +246,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 
 	/**
 	 * 构造 KRPC 协议数据
+	 *
 	 * @param t
 	 * @param y
 	 * @param arg
@@ -258,9 +271,10 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	}
 
 	/**
-	* 查询 DHT 节点线程，用于持续获取新的 DHT 节点
-	* @since 2019/2/17
-	**/
+	 * 查询 DHT 节点线程，用于持续获取新的 DHT 节点
+	 *
+	 * @since 2019/2/17
+	 **/
 	private Thread findNodeTask = new Thread() {
 
 		@Override
@@ -274,7 +288,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 						}
 					} catch (Exception e) {
 					}
-					Thread.sleep(100);
+					Thread.sleep(50);
 				}
 			} catch (InterruptedException e) {
 			}

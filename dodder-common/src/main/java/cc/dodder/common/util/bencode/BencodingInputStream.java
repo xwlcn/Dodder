@@ -1,4 +1,4 @@
-package cc.dodder.dhtserver.util.bencode;
+package cc.dodder.common.util.bencode;
 
 import java.io.*;
 import java.math.BigDecimal;

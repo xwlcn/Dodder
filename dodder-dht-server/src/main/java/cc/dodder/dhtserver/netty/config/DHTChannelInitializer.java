@@ -12,17 +12,12 @@ import org.springframework.stereotype.Component;
 @Qualifier("channelInitializer")
 public class DHTChannelInitializer extends ChannelInitializer<DatagramChannel> {
 
-	private static int TIMEOUT = 1 * 60;
-
 	@Autowired
 	private DHTServerHandler dhtServerHandler;
 
 	@Override
 	protected void initChannel(DatagramChannel ch) throws Exception {
 		ChannelPipeline pipeline = ch.pipeline();
-		/*pipeline.addLast(
-				new ReadTimeoutHandler(TIMEOUT),
-				new WriteTimeoutHandler(TIMEOUT));*/
 		pipeline.addLast("handler", dhtServerHandler);
 	}
 }

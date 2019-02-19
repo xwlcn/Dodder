@@ -1,12 +1,12 @@
-package cc.dodder.dhtserver.util;
+package cc.dodder.common.util;
 
 import java.util.Random;
 
 /***
  * NodeId 生成工具
  *
- * @author: Mr.Xu
- * @create: 2019-02-15 17:36
+ * @author Mr.Xu
+ * @simce 2019-02-15 17:36
  **/
 public class NodeIdUtil {
 
