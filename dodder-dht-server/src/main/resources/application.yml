@@ -1,0 +1,37 @@
+## netty服务器端口
+netty:
+  udp:
+    port: 6688
+  so:
+    backlog: 100
+    rcvbuf: 268435456
+    sndbuf: 65536
+
+spring:
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    jedis:
+      pool:
+        max-idle: 8
+        min-idle: 0
+        max-active: 8
+        max-wait: -1ms
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: 127.0.0.1
+        bindings:
+          download-message-out:
+            destination: downloadMessages
+            contentType: application/json
+            producer:
+              compressionType: gzip
+
+
+
+
+## 日志级别
+logging:
+  level: error

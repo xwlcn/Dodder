@@ -1,11 +1,13 @@
 package cc.dodder.dhtserver.netty.handler;
 
+import cc.dodder.common.entity.DownloadMsgInfo;
 import cc.dodder.common.util.ByteUtil;
 import cc.dodder.common.util.NodeIdUtil;
 import cc.dodder.common.util.bencode.BencodingUtils;
 import cc.dodder.dhtserver.netty.DHTServer;
 import cc.dodder.dhtserver.netty.entity.Node;
 import cc.dodder.dhtserver.netty.entity.UniqueBlockingQueue;
+import cc.dodder.dhtserver.stream.MessageStreams;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -13,7 +15,11 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MimeTypeUtils;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -31,6 +37,13 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 
 	@Autowired
 	private DHTServer dhtServer;
+
+	@Autowired
+	private RedisTemplate redisTemplate;
+	@Autowired
+	private MessageStreams messageStreams;
+
+
 
 	public static final UniqueBlockingQueue NODES_QUEUE = new UniqueBlockingQueue();
 
@@ -153,7 +166,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		byte[] info_hash = (byte[]) a.get("info_hash");
 		byte[] token = (byte[]) a.get("token");
 		int port;
-		if (a.containsKey("implied_port") && ((BigInteger) a.get("implied_port")).intValue() != 0) {
+		if (a.containsKey("implied_port") && ((BigInteger) a.get("implied_port")).shortValue() != 0) {
 			port = sender.getPort();
 		} else {
 			port = ((BigInteger) a.get("port")).intValue();
@@ -163,9 +176,17 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		r.put("id", NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, info_hash));
 		DatagramPacket packet = createPacket(t, "r", r, sender);
 		dhtServer.sendKRPC(packet);
-		// TODO 将 info_hash 放进消息队列
+		// 将 info_hash 放进消息队列
 		if (token.length == 2 && info_hash[0] == token[0] && info_hash[1] == token[1]) {    //check token
 			log.error("info_hash[AnnouncePeer] : {}:{} - {}", sender.getHostString(), port, ByteUtil.byteArrayToHex(info_hash));
+			//使用 redis 将消息队列去重
+			if (redisTemplate.opsForValue().getAndSet(info_hash, new byte[0]) != null)
+				return;
+			messageStreams.downloadMessageOutput()
+					.send(MessageBuilder
+							.withPayload(new DownloadMsgInfo(sender.getHostString(), port, info_hash))
+							.setHeader(MessageHeaders.CONTENT_TYPE, MimeTypeUtils.APPLICATION_JSON)
+							.build());
 		}
 	}
 

@@ -1,6 +1,7 @@
 package cc.dodder.dhtserver.netty;
 
-import cc.dodder.dhtserver.util.NodeIdUtil;
+
+import cc.dodder.common.util.NodeIdUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DatagramPacket;
@@ -18,8 +19,8 @@ import java.util.List;
 /***
  * 模拟 DHT 节点服务器
  *
- * @author: Mr.Xu
- * @create: 2019-02-15 14:44
+ * @author Mr.Xu
+ * @since 2019-02-15 14:44
  **/
 @Slf4j
 @Component
@@ -51,6 +52,7 @@ public class DHTServer {
 
 	/**
 	 * 随 SpringBoot 启动 DHT 服务器
+	 *
 	 * @throws Exception
 	 */
 	@PostConstruct
@@ -62,6 +64,7 @@ public class DHTServer {
 
 	/**
 	 * 发送 KRPC 协议数据报文
+	 *
 	 * @param packet
 	 */
 	public void sendKRPC(DatagramPacket packet) {

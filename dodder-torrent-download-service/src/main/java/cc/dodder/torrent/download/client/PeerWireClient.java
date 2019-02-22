@@ -1,10 +1,15 @@
 package cc.dodder.torrent.download.client;
 
+import cc.dodder.common.entity.Info;
+import cc.dodder.common.entity.SubFile;
+import cc.dodder.common.entity.Torrent;
 import cc.dodder.common.util.ByteUtil;
+import cc.dodder.common.util.ExtensionUtil;
 import cc.dodder.common.util.bencode.BencodingUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.util.codec.binary.StringUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -12,9 +17,8 @@ import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Consumer;
 
 /***
  * Peer Wire 协议客户端
@@ -42,6 +46,15 @@ public class PeerWireClient {
 	private int nextSize;
 	private NextFunction next;
 
+	/**
+	 * 下载完成监听器
+	 */
+	private Consumer<Torrent> onFinishedListener;
+
+	public void setFinishedListener(Consumer<Torrent> listener) {
+		this.onFinishedListener = listener;
+	}
+
 	public void downloadMetadata(InetSocketAddress address, byte[] infoHash) {
 		socket = new Socket();
 		try {
@@ -62,7 +75,7 @@ public class PeerWireClient {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			destrory();
+			destroy();
 		}
 	}
 
@@ -105,13 +118,10 @@ public class PeerWireClient {
 	};
 
 	private void resolveExtendMessage(byte b, byte[] buf) throws Exception {
-
-		if (b == 0) {
+		if (b == 0)
 			resolveExtendHandShake(BencodingUtils.decode(buf));
-		} else {
+		else
 			resolvePiece(buf);
-		}
-
 	}
 
 	private void resolvePiece(byte[] buff) {
@@ -121,12 +131,12 @@ public class PeerWireClient {
 		byte[] piece_metadata = Arrays.copyOfRange(buff, pos, buff.length);
 
 		if (!map.containsKey("msg_type") || !map.containsKey("piece")) {
-			destrory();
+			destroy();
 			return;
 		}
 
 		if (((BigInteger) map.get("msg_type")).intValue() != 1) {
-			destrory();
+			destroy();
 			return;
 		}
 
@@ -140,9 +150,157 @@ public class PeerWireClient {
 	private void checkFinished() {
 		if (pieces <= 0) {
 			Map map = BencodingUtils.decode(Arrays.copyOfRange(metadata, 0, metadata_size));
-			destrory();
-			System.out.println(map);
+			destroy();
+			if (map == null)
+				return;
+			Optional<Torrent> torrent = parseTorrent(map);
+			torrent.ifPresent(onFinishedListener);
 		}
+	}
+
+	/**
+	* 解析 Torrent 文件信息，封装成对象
+	 *
+	 * 多文件Torrent的结构的树形图为：
+	 *
+	 * Multi-file Torrent
+	 * ├─announce
+	 * ├─announce-list
+	 * ├─comment
+	 * ├─comment.utf-8
+	 * ├─creation date
+	 * ├─encoding
+	 * ├─info
+	 * │ ├─files
+	 * │ │ ├─length
+	 * │ │ ├─path
+	 * │ │ └─path.utf-8
+	 * │ ├─name
+	 * │ ├─name.utf-8
+	 * │ ├─piece length
+	 * │ ├─pieces
+	 * │ ├─publisher
+	 * │ ├─publisher-url
+	 * │ ├─publisher-url.utf-8
+	 * │ └─publisher.utf-8
+	 * └─nodes
+	 *
+	 * 单文件Torrent的结构的树形图为：
+	 *
+	 * Single-File Torrent
+	 * ├─announce
+	 * ├─announce-list
+	 * ├─comment
+	 * ├─comment.utf-8
+	 * ├─creation date
+	 * ├─encoding
+	 * ├─info
+	 * │ ├─length
+	 * │ ├─name
+	 * │ ├─name.utf-8
+	 * │ ├─piece length
+	 * │ ├─pieces
+	 * │ ├─publisher
+	 * │ ├─publisher-url
+	 * │ ├─publisher-url.utf-8
+	 * │ └─publisher.utf-8
+	 * └─nodes
+	*
+	* @param map
+	* @return java.util.Optional<cc.dodder.common.entity.Torrent>
+	*/
+	private Optional<Torrent> parseTorrent(Map map) {
+		String encoding = "UTF-8";
+		Torrent torrent;
+		Map<String, Object> info;
+
+		if (map.containsKey("info"))
+			info = (Map<String, Object>) map.get("info");
+		else
+			info = map;
+
+		if (!info.containsKey("name"))
+			return Optional.empty();
+		if (map.containsKey("encoding"))
+			encoding = (String) map.get("encoding");
+		/*
+		if (map.containsKey("announce")) {
+			torrent.setAnnounce(decode_utf8(encoding, map, "announce"));
+		}
+
+		if (map.containsKey("comment")) {
+			torrent.setComment(decode_utf8(encoding, map, "comment").toString().substring(0, 300));
+		}
+
+		if (map.containsKey("created by")) {
+			torrent.setCreatedBy(decode_utf8(encoding, map, "created by"));
+		}*/
+		torrent = new Torrent();
+		Info torrentInfo = new Info();
+
+		if (map.containsKey("creation date"))
+			torrent.setCreationDate(new Date(((BigInteger) map.get("creation date")).longValue()));
+		else
+			torrent.setCreationDate(new Date());
+
+
+		String name = decode_utf8(encoding, map, "name");
+		torrentInfo.setName(name.length() > 200 ? name.substring(0, 200) : name);
+
+		Set<String> types = new HashSet<>();
+		//多文件
+		if (info.containsKey("files")) {
+			List<Map<String, Object>> list = (List<Map<String, Object>>) info.get("files");
+			List<SubFile> subFiles = new ArrayList<>();
+			Long countLength = new Long(0);
+			for (Map<String, Object> f : list) {
+				Long length = ((BigInteger) f.get("length")).longValue();
+				countLength += length;
+
+				String path = decode_utf8_2(encoding, f, "path");
+				if (path != null)
+					path = path.length() > 200 ? path.substring(0, 200) : path;
+				SubFile subFile = new SubFile(length, path);
+
+				String type = ExtensionUtil.getExtensionType(subFile.getPath());
+				if (type != null) {
+					types.add(type);
+				}
+
+				if (subFile.getPath().indexOf("如果您看到此文件，请升级到BitComet(比特彗星)") == -1)
+					subFiles.add(subFile);
+			}
+			torrentInfo.setFiles(subFiles);
+			torrentInfo.setLength(countLength);
+
+			String temp = org.apache.commons.lang.StringUtils.join(types.toArray(new String[]{}), ",");
+			if (temp != null && !"".equals(temp)) {
+				torrent.setType(temp);
+			} else {
+				torrent.setType("其他");
+			}
+		} else {
+			torrentInfo.setLength(((BigInteger) info.get("length")).longValue());
+
+			String type = ExtensionUtil.getExtensionType(name);
+			torrent.setType(type == null ? "未知" :type);
+		}
+		torrent.setInfo(torrentInfo);
+		return Optional.of(torrent);
+	}
+
+	private String decode_utf8(String encoding, Map<String, Object> map, String key) {
+		if (map.containsKey(key + ".utf-8")) {
+			return new String((byte[]) map.get(key + ".utf-8"), StandardCharsets.UTF_8);
+		}
+		return StringUtils.newStringUtf8((byte[]) map.get(key));
+	}
+
+	private String decode_utf8_2(String encoding, Map<String, Object> map, String key) {
+		if (map.containsKey(key + ".utf-8")) {
+			return new String(((List<byte[]>) map.get(key + ".utf-8")).get(0), StandardCharsets.UTF_8);
+		}
+		return StringUtils.newStringUtf8(((List<byte[]>) map.get(key )).get(0));
 	}
 
 	private void resolveExtendHandShake(Map map) throws Exception {
@@ -150,14 +308,14 @@ public class PeerWireClient {
 		Map m = (Map<String, Object>) map.get("m");
 
 		if (m == null || !m.containsKey("ut_metadata") || !map.containsKey("metadata_size")) {
-			destrory();
+			destroy();
 			return;
 		}
 		this.ut_metadata = ((BigInteger) m.get("ut_metadata")).intValue();
 		this.metadata_size = ((BigInteger) map.get("metadata_size")).intValue();
 
 		if (this.metadata_size > Constants.MAX_METADATA_SIZE) {
-			destrory();
+			destroy();
 			return;
 		}
 
@@ -238,7 +396,7 @@ public class PeerWireClient {
 		this.next = next;
 	}
 
-	private void destrory() {
+	private void destroy() {
 		if (socket.isConnected()) {
 			try {
 				socket.close();

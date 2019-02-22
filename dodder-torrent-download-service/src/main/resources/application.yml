@@ -1,0 +1,30 @@
+server:
+  port: 8762
+spring:
+  application:
+    name: torrent-download-service
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: 127.0.0.1
+        bindings:
+          download-message-in:
+            group: torrent-download-group
+            destination: downloadMessages
+            contentType: application/json
+          torrent-message-out:
+            destination: torrentMessages
+            contentType: application/json
+            producer:
+              compressionType: gzip
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://127.0.0.1:8761/eureka/
+
+#线程池大小，根据实际集群情况设置，集群数量越多，线程数量可适当减少
+download:
+  num:
+    thread: 200

@@ -1,4 +1,4 @@
-package cc.dodder.torrent.download.service;
+package cc.dodder.torrent.download.stream;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

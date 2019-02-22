@@ -1,0 +1,12 @@
+#server.port=8762
+#spring.application.name=dht-server
+#eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
+server:
+  port: 8764
+spring:
+  application:
+    name: torrent-store-service
+eureka:
+  client:
+    service-url:
+      defaultZone: http://127.0.0.1:8761/eureka/
