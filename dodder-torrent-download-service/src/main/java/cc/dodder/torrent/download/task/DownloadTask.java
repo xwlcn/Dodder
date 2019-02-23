@@ -1,13 +1,9 @@
 package cc.dodder.torrent.download.task;
 
 import cc.dodder.common.entity.DownloadMsgInfo;
-import cc.dodder.common.util.ByteUtil;
 import cc.dodder.torrent.download.client.PeerWireClient;
-import cc.dodder.torrent.download.client.StoreFeignClient;
 import cc.dodder.torrent.download.stream.MessageStreams;
 import cc.dodder.torrent.download.util.SpringContextUtil;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.util.MimeTypeUtils;
@@ -24,7 +20,6 @@ public class DownloadTask implements Runnable {
 
 	private DownloadMsgInfo msgInfo;
 	private MessageStreams messageStreams;
-	private StoreFeignClient storeFeignClient;
 
 	public DownloadTask(DownloadMsgInfo msgInfo) {
 		this.msgInfo = msgInfo;
@@ -32,13 +27,9 @@ public class DownloadTask implements Runnable {
 
 	@Override
 	public void run() {
-		storeFeignClient = (StoreFeignClient) SpringContextUtil.getBean(StoreFeignClient.class);
-		ResponseEntity response = storeFeignClient.existHash(ByteUtil.byteArrayToHex(msgInfo.getInfoHash()));
-		if (response.getStatusCode() == HttpStatus.NO_CONTENT)
-			return;
 		PeerWireClient wireClient = new PeerWireClient();
 		//设置下载完成监听器
-		wireClient.setFinishedListener((torrent) -> {
+		wireClient.setOnFinishedListener((torrent) -> {
 			messageStreams = (MessageStreams) SpringContextUtil.getBean(MessageStreams.class);
 			//丢进 kafka 消息队列进行入库操作
 			messageStreams.torrentMessageOutput()

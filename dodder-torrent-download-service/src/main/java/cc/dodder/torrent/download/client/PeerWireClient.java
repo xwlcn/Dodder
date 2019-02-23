@@ -46,12 +46,14 @@ public class PeerWireClient {
 	private int nextSize;
 	private NextFunction next;
 
+	private Optional<Torrent> torrent;
+
 	/**
 	 * 下载完成监听器
 	 */
 	private Consumer<Torrent> onFinishedListener;
 
-	public void setFinishedListener(Consumer<Torrent> listener) {
+	public void setOnFinishedListener(Consumer<Torrent> listener) {
 		this.onFinishedListener = listener;
 	}
 
@@ -73,9 +75,10 @@ public class PeerWireClient {
 				handleMessage();
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 		} finally {
 			destroy();
+			torrent.ifPresent(onFinishedListener);
 		}
 	}
 
@@ -153,8 +156,7 @@ public class PeerWireClient {
 			destroy();
 			if (map == null)
 				return;
-			Optional<Torrent> torrent = parseTorrent(map);
-			torrent.ifPresent(onFinishedListener);
+			this.torrent = parseTorrent(map);
 		}
 	}
 
@@ -211,9 +213,8 @@ public class PeerWireClient {
 	*/
 	private Optional<Torrent> parseTorrent(Map map) {
 		String encoding = "UTF-8";
-		Torrent torrent;
 		Map<String, Object> info;
-
+		Torrent torrent;
 		if (map.containsKey("info"))
 			info = (Map<String, Object>) map.get("info");
 		else
@@ -283,7 +284,7 @@ public class PeerWireClient {
 			torrentInfo.setLength(((BigInteger) info.get("length")).longValue());
 
 			String type = ExtensionUtil.getExtensionType(name);
-			torrent.setType(type == null ? "未知" :type);
+			torrent.setType(type == null ? "其他" :type);
 		}
 		torrent.setInfo(torrentInfo);
 		return Optional.of(torrent);
