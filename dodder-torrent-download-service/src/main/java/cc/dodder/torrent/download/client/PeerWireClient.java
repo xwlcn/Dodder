@@ -1,10 +1,8 @@
 package cc.dodder.torrent.download.client;
 
-import cc.dodder.common.entity.Info;
-import cc.dodder.common.entity.SubFile;
 import cc.dodder.common.entity.Torrent;
+import cc.dodder.common.entity.TorrentFile;
 import cc.dodder.common.util.ByteUtil;
-import cc.dodder.common.util.ExtensionUtil;
 import cc.dodder.common.util.bencode.BencodingUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -13,6 +11,7 @@ import org.apache.tomcat.util.codec.binary.StringUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -152,11 +151,16 @@ public class PeerWireClient {
 
 	private void checkFinished() {
 		if (pieces <= 0) {
-			Map map = BencodingUtils.decode(Arrays.copyOfRange(metadata, 0, metadata_size));
+			try {
+				TorrentFile torrentFile = new TorrentFile(new String(metadata, StandardCharsets.ISO_8859_1));
+				torrent = torrentFile.toEntity();
+			} catch (IOException e) {
+			}
+			//Map map = BencodingUtils.decode(Arrays.copyOfRange(metadata, 0, metadata_size));
 			destroy();
-			if (map == null)
-				return;
-			this.torrent = parseTorrent(map);
+			//if (map == null)
+			//	return;
+			//this.torrent = parseTorrent(map);
 		}
 	}
 
@@ -211,7 +215,7 @@ public class PeerWireClient {
 	* @param map
 	* @return java.util.Optional<cc.dodder.common.entity.Torrent>
 	*/
-	private Optional<Torrent> parseTorrent(Map map) {
+	/*private Optional<Torrent> parseTorrent(Map map) {
 		String encoding = "UTF-8";
 		Map<String, Object> info;
 		Torrent torrent;
@@ -224,7 +228,7 @@ public class PeerWireClient {
 			return Optional.empty();
 		if (map.containsKey("encoding"))
 			encoding = (String) map.get("encoding");
-		/*
+		*//*
 		if (map.containsKey("announce")) {
 			torrent.setAnnounce(decode_utf8(encoding, map, "announce"));
 		}
@@ -235,7 +239,7 @@ public class PeerWireClient {
 
 		if (map.containsKey("created by")) {
 			torrent.setCreatedBy(decode_utf8(encoding, map, "created by"));
-		}*/
+		}*//*
 		torrent = new Torrent();
 		Info torrentInfo = new Info();
 
@@ -288,7 +292,7 @@ public class PeerWireClient {
 		}
 		torrent.setInfo(torrentInfo);
 		return Optional.of(torrent);
-	}
+	}*/
 
 	private String decode_utf8(String encoding, Map<String, Object> map, String key) {
 		if (map.containsKey(key + ".utf-8")) {

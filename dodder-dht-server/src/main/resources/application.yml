@@ -1,4 +1,4 @@
-## netty·şÎñÆ÷¶Ë¿Ú
+## nettyæœåŠ¡å™¨ç«¯å£
 netty:
   udp:
     port: 6688
@@ -32,6 +32,6 @@ spring:
 
 
 
-## ÈÕÖ¾¼¶±ğ
+## æ—¥å¿—çº§åˆ«
 logging:
   level: error

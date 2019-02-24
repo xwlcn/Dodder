@@ -1,12 +1,22 @@
-#server.port=8762
-#spring.application.name=dht-server
-#eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
 server:
   port: 8764
 spring:
   application:
     name: torrent-store-service
-eureka:
-  client:
-    service-url:
-      defaultZone: http://127.0.0.1:8761/eureka/
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 62.4.22.8:8848
+  data:
+    elasticsearch:
+      cluster-nodes: 127.0.0.1:9200
+      properties:
+        path:
+          logs: ./elasticsearch/log #elasticsearch日志存储目录
+          data: ./elasticsearch/data #elasticsearch数据存储目录
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ["*"]

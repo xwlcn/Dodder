@@ -11,5 +11,25 @@
 
     <artifactId>dodder-common</artifactId>
 
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.eclipse.ecf.protocol/bittorrent -->
+        <dependency>
+            <groupId>org.eclipse.ecf.protocol</groupId>
+            <artifactId>bittorrent</artifactId>
+            <version>0.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>jabylon-maven</id>
+            <name>jabylon</name>
+            <url>http://www.jabylon.org/maven/</url>
+        </repository>
+    </repositories>
 
 </project>

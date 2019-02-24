@@ -1,4 +1,4 @@
-package cc.dodder.torrent.download.config;
+package cc.dodder.config;
 
 import feign.Retryer;
 import org.springframework.context.annotation.Bean;
@@ -15,8 +15,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 @Configuration
 public class FeignConfig {
 
-	@Bean
-	public Retryer feignRetryer() {
-		return new Retryer.Default(100, SECONDS.toMillis(1), 3);
-	}
+    @Bean
+    public Retryer feignRetryer() {
+        return new Retryer.Default(100, SECONDS.toMillis(1), 3);
+    }
 }

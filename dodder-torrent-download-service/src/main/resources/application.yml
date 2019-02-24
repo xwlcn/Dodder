@@ -16,7 +16,7 @@ spring:
     stream:
       kafka:
         binder:
-          brokers: 127.0.0.1
+          brokers: 62.4.22.8
         bindings:
           download-message-in:
             group: torrent-download-group
@@ -27,13 +27,20 @@ spring:
             contentType: application/json
             producer:
               compressionType: gzip
+    nacos:
+      discovery:
+        server-addr: 62.4.22.8:8848
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://127.0.0.1:8761/eureka/
+feign:
+  httpclient:
+    enabled: true
 
-#线程池大小，根据实际集群情况设置，集群数量越多，线程数量可适当减少
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ["*"]
+
 download:
   num:
     thread: 200

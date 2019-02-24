@@ -1,28 +1,33 @@
 package cc.dodder.torrent.download;
 
+import cc.dodder.api.StoreFeignClient;
 import cc.dodder.common.entity.DownloadMsgInfo;
 import cc.dodder.common.util.ByteUtil;
-import cc.dodder.torrent.download.client.StoreFeignClient;
 import cc.dodder.torrent.download.stream.MessageStreams;
 import cc.dodder.torrent.download.task.DownloadTask;
+import org.eclipse.ecf.protocol.bittorrent.TorrentFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@EnableEurekaClient
-@EnableFeignClients
+@RestController
+@EnableDiscoveryClient
+@EnableFeignClients(basePackages = {"cc.dodder.api"})
 @EnableBinding(MessageStreams.class)
 @SpringBootApplication
 public class TorrentDownloadServiceApplication {
@@ -40,7 +45,7 @@ public class TorrentDownloadServiceApplication {
 		//client.downloadMetadata(new InetSocketAddress("160.19.2.249", 52881), ByteUtil.hexStringToBytes("68273319565c1230b67b3dd21731a15d9f766f89"));
 	}
 
-	@StreamListener("message-in")
+	@StreamListener("download-message-in")
 	public void handleMessage(DownloadMsgInfo msgInfo) {
 		ResponseEntity response = storeFeignClient.existHash(ByteUtil.byteArrayToHex(msgInfo.getInfoHash()));
 		if (response.getStatusCode() == HttpStatus.NO_CONTENT)
@@ -58,6 +63,16 @@ public class TorrentDownloadServiceApplication {
 	public void destroy() {
 		downloadTasks.shutdownNow();
 	}
+
+	@ResponseBody
+	@RequestMapping("/test")
+	public ResponseEntity test() {
+		ResponseEntity response =  storeFeignClient.existHash("test");
+		return response;
+	}
+
+
+
 
 }
 

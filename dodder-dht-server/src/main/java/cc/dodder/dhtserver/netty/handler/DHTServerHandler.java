@@ -1,5 +1,6 @@
 package cc.dodder.dhtserver.netty.handler;
 
+import cc.dodder.api.StoreFeignClient;
 import cc.dodder.common.entity.DownloadMsgInfo;
 import cc.dodder.common.util.ByteUtil;
 import cc.dodder.common.util.NodeIdUtil;
@@ -16,6 +17,8 @@ import io.netty.channel.socket.DatagramPacket;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
