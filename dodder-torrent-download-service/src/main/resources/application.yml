@@ -16,20 +16,20 @@ spring:
     stream:
       kafka:
         binder:
-          brokers: 62.4.22.8
-        bindings:
-          download-message-in:
-            group: torrent-download-group
-            destination: downloadMessages
-            contentType: application/json
-          torrent-message-out:
-            destination: torrentMessages
-            contentType: application/json
-            producer:
-              compressionType: gzip
+          brokers: 127.0.0.1
+      bindings:
+        download-message-in:
+          group: torrent-download-group
+          destination: downloadMessages
+          contentType: application/json
+        torrent-message-out:
+          destination: torrentMessages
+          contentType: application/json
+          producer:
+            compressionType: gzip
     nacos:
       discovery:
-        server-addr: 62.4.22.8:8848
+        server-addr: 127.0.0.1:8848
 
 feign:
   httpclient:
@@ -43,4 +43,4 @@ management:
 
 download:
   num:
-    thread: 200
+    thread: 300

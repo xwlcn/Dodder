@@ -1,7 +1,8 @@
 package cc.dodder.torrent.store.repository;
 
 import cc.dodder.common.entity.Torrent;
-import org.springframework.data.elasticsearch.repository.ElasticsearchCrudRepository;
+import cc.dodder.torrent.store.repository.customer.TorrentDao;
+import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 
-public interface TorrentRepository extends ElasticsearchCrudRepository<Torrent, String> {
+public interface TorrentRepository extends ElasticsearchRepository<Torrent, String>, TorrentDao {
 }

@@ -22,16 +22,11 @@ spring:
       kafka:
         binder:
           brokers: 127.0.0.1
-        bindings:
-          download-message-out:
-            destination: downloadMessages
-            contentType: application/json
-            producer:
-              compressionType: gzip
-
-
-
-
-## 日志级别
+      bindings:
+        download-message-out:
+          destination: downloadMessages
+          contentType: application/json
+          producer:
+            compressionType: gzip
 logging:
   level: error

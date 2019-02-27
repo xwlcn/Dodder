@@ -6,10 +6,22 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: 62.4.22.8:8848
+        server-addr: 127.0.0.1:8848
+    stream:
+      kafka:
+        binder:
+          brokers: 127.0.0.1
+      bindings:
+        torrent-message-in:
+          destination: torrentMessages
+          contentType: application/json
+          consumer:
+            compressionType: gzip
   data:
     elasticsearch:
-      cluster-nodes: 127.0.0.1:9200
+      cluster-nodes: 127.0.0.1:9300
+      repositories:
+        enabled: true
       properties:
         path:
           logs: ./elasticsearch/log #elasticsearch日志存储目录

@@ -85,10 +85,11 @@ public class ExtensionUtil {
 		if (ext == null)
 			return null;
 
+		if (ext.endsWith("\\") || ext.endsWith("/"))
+			ext = ext.substring(0, ext.length() - 1);
+
 		String type = EXT.get(ext);
 
-		if (type == null)
-			return "其他";
 		return type;
 	}
 

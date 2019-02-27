@@ -1,20 +1,16 @@
 package cc.dodder.common.entity;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.List;
-import java.util.Optional;
-
+import cc.dodder.common.util.ExtensionUtil;
+import cc.dodder.common.util.StringUtil;
+import com.alibaba.fastjson.JSON;
 import org.eclipse.ecf.protocol.bittorrent.internal.encode.BEncodedDictionary;
 import org.eclipse.ecf.protocol.bittorrent.internal.encode.Decode;
+
+import java.io.File;
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 
 /***
  * Torrent 种子文件信息，改自 eclipse ecf torrent 协议 TorrentFile 类
@@ -23,225 +19,150 @@ import org.eclipse.ecf.protocol.bittorrent.internal.encode.Decode;
  * @since 2019-02-24 20:23
  **/
 public class TorrentFile {
+
 	static MessageDigest shaDigest;
 	private final String[] filenames;
-	private final String[] pieces;
 	private final long[] lengths;
 	private final byte[] torrentData;
-	private final ByteBuffer buffer;
+
 	private final BEncodedDictionary dictionary;
 	private final String tracker;
 	private final String infoHash;
-	private final String hexHash;
 	private File file;
 	private String name;
 	private long total;
-	private final int pieceLength;
-	private final int numPieces;
+	private Long createDate;
+	private String fileType;
+	private Tree tree;
 
-	/**
-	 * Wild China 2xBD50/DISC_1/CERTIFICATE
-	 * Wild China 2xBD50/DISC_1/disc.inf
-	 */
 	static {
 		try {
-			shaDigest = MessageDigest.getInstance("SHA-1");
-		} catch (NoSuchAlgorithmException var1) {
-			throw new RuntimeException(var1);
+			shaDigest = MessageDigest.getInstance("SHA-1"); //$NON-NLS-1$
+		} catch (final NoSuchAlgorithmException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
-	public TorrentFile(String metadata) throws IllegalArgumentException, IOException {
+	/**
+	 * Creates a new <code>Torrent</code> to analyze the provided torrent
+	 * file.
+	 *
+	 * @param metadata
+	 *            the torrent metadata
+	 * @throws IllegalArgumentException
+	 *             If <code>file</code> is <code>null</code> or a directory
+	 * @throws IOException
+	 *             If an I/O error occurs whilst analyzing the torrent file
+	 */
+	public TorrentFile(String metadata, String infoHash) throws IllegalArgumentException, IOException {
+		this.infoHash = infoHash;
+		dictionary = Decode.bDecode(metadata);
+		torrentData = dictionary.toString().getBytes("ISO-8859-1"); //$NON-NLS-1$
+		tracker = (String) dictionary.get("announce"); //$NON-NLS-1$
 
-		this.dictionary = Decode.bDecode(metadata);
-		this.torrentData = this.dictionary.toString().getBytes(StandardCharsets.ISO_8859_1);
-		this.tracker = (String)this.dictionary.get("announce");
-		BEncodedDictionary info = (BEncodedDictionary)this.dictionary.get("info");
-		List list = (List)info.get("files");
+		createDate = (Long) dictionary.get("creation date");
+		createDate = createDate == null ? new Date().getTime() : createDate;
+
+		BEncodedDictionary info = (BEncodedDictionary) dictionary.get("info"); //$NON-NLS-1$
+		if (info == null)
+			info = dictionary;
+		final List list = (List) info.get("files"); //$NON-NLS-1$
+		String encoding = (String) dictionary.get("encoding");
+		byte[] bytes = ((String) info.get("name")).getBytes("ISO-8859-1");
+		encoding = encoding == null ? StringUtil.getEncoding(bytes) : encoding;
+		name = new String(bytes, encoding);
+		Set<String> types = new HashSet<>();
 		if (list != null) {
-			this.filenames = new String[list.size()];
-			this.lengths = new long[this.filenames.length];
-			this.total = 0L;
+			filenames = new String[list.size()];
+			lengths = new long[filenames.length];
+			total = 0;
+			for (int i = 0; i < filenames.length; i++) {
+				final BEncodedDictionary aDictionary = (BEncodedDictionary) list.get(i);
+				lengths[i] = ((Long) aDictionary.get("length")).longValue(); //$NON-NLS-1$
+				total += lengths[i];
+				final List aList = (List) aDictionary.get("path"); //$NON-NLS-1$
 
-			for(int i = 0; i < this.filenames.length; ++i) {
-				BEncodedDictionary aDictionary = (BEncodedDictionary)list.get(i);
-				this.lengths[i] = (Long)aDictionary.get("length");
-				this.total += this.lengths[i];
-				List aList = (List)aDictionary.get("path");
-				StringBuffer buffer = new StringBuffer();
-				synchronized(buffer) {
-					int j = 0;
-
-					while(true) {
-						if (j >= aList.size()) {
-							break;
-						}
-
-						buffer.append(aList.get(j)).append(File.separator);
-						++j;
+				final StringBuffer buffer = new StringBuffer();
+				synchronized (buffer) {
+					for (int j = 0; j < aList.size(); j++) {
+						String sname = new String(((String)aList.get(j)).getBytes("ISO-8859-1"),encoding);
+						buffer.append(sname).append(File.separator);
 					}
 				}
-
-				this.filenames[i] = buffer.toString();
-			}
-		} else {
-			this.lengths = new long[]{(Long)info.get("length")};
-			this.total = this.lengths[0];
-			this.filenames = new String[]{(String)info.get("name")};
-		}
-		this.name = this.filenames[0].split("/")[0];
-		this.pieceLength = ((Long)info.get("piece length")).intValue();
-		this.buffer = ByteBuffer.allocate(this.pieceLength);
-		String shaPieces = (String)info.get("pieces");
-		this.pieces = new String[shaPieces.length() / 20];
-
-		for(int i = 0; i < this.pieces.length; ++i) {
-			this.pieces[i] = shaPieces.substring(i * 20, i * 20 + 20);
-		}
-
-		this.numPieces = this.pieces.length;
-		this.infoHash = new String(shaDigest.digest(info.toString().getBytes(StandardCharsets.ISO_8859_1)), StandardCharsets.ISO_8859_1);
-		byte[] bytes = this.infoHash.getBytes(StandardCharsets.ISO_8859_1);
-		StringBuffer hash = new StringBuffer(40);
-
-		for(int i = 0; i < bytes.length; ++i) {
-			if (-1 < bytes[i] && bytes[i] < 16) {
-				hash.append('0');
-			}
-
-			hash.append(Integer.toHexString(255 & bytes[i]));
-		}
-
-		this.hexHash = hash.toString();
-	}
-
-	private boolean hashCheckFile() throws FileNotFoundException, IOException {
-		int remainder = (int)(this.file.length() % (long)this.pieceLength);
-		int count = 0;
-
-		for(FileChannel channel = (new FileInputStream(this.file)).getChannel(); channel.read(this.buffer) == this.pieceLength; ++count) {
-			this.buffer.rewind();
-			if (!this.pieces[count].equals(new String(shaDigest.digest(this.buffer.array()), StandardCharsets.ISO_8859_1))) {
-				return false;
-			}
-		}
-
-		this.buffer.rewind();
-		shaDigest.update(this.buffer.array(), 0, remainder);
-		return this.pieces[this.pieces.length - 1].equals(new String(shaDigest.digest(), StandardCharsets.ISO_8859_1));
-	}
-
-	private boolean hashCheckFolder() throws FileNotFoundException, IOException {
-		int read = 0;
-		int count = 0;
-
-		for(int i = 0; i < this.filenames.length; ++i) {
-			File download = new File(this.file.getAbsolutePath(), this.filenames[i]);
-
-			for(FileChannel channel = (new FileInputStream(download)).getChannel(); (read += channel.read(this.buffer)) == this.pieceLength; read = 0) {
-				this.buffer.rewind();
-				if (!this.pieces[count].equals(new String(shaDigest.digest(this.buffer.array()), StandardCharsets.ISO_8859_1))) {
-					return false;
+				filenames[i] = buffer.toString();
+				String type = ExtensionUtil.getExtensionType(filenames[i]);
+				if (type != null) {
+					types.add(type);
 				}
-
-				++count;
+			}
+		} else {
+			lengths = new long[] {((Long) info.get("length")).longValue()}; //$NON-NLS-1$
+			total = lengths[0];
+			filenames = new String[] {name}; //$NON-NLS-1$
+			String type = ExtensionUtil.getExtensionType(filenames[0]);
+			if (type != null) {
+				types.add(type);
 			}
 		}
-
-		this.buffer.rewind();
-		shaDigest.update(this.buffer.array(), 0, read);
-		return this.pieces[this.pieces.length - 1].equals(new String(shaDigest.digest(), StandardCharsets.ISO_8859_1));
-	}
-
-	public boolean validate() throws IllegalStateException, IOException {
-		if (this.file == null) {
-			throw new IllegalStateException("The target file for this torrent has not yet been set");
+		if (types.size() <= 0)
+			types.add("其他");
+		String sType = String.join(",", types);
+		if (sType != null && !"".equals(sType)) {
+			this.fileType = sType;
 		} else {
-			return this.file.isDirectory() ? this.hashCheckFolder() : this.hashCheckFile();
+			this.fileType = "其他";
+		}
+
+		//将文件列表转为树形结构
+		List<Long> sizes = new ArrayList<>();
+		List<String> names = new ArrayList<>();
+		List<Integer> indexes = new ArrayList<>();
+		//过滤无效文件
+		for (int i = 0; i < filenames.length; i++) {
+			if (!filenames[i].contains("_____padding_file_")) {
+				names.add(filenames[i]);
+				sizes.add(lengths[i]);
+				indexes.add(i);
+			}
+		}
+		if (names.size() >0 && names.size() == sizes.size()) {
+			List<Node> nodes = new ArrayList<>();
+			int cur = 1, parent = 0;
+			for (int j = 0; j < names.size(); j++) {
+				String[] arr = names.get(j).split("\\\\");
+				if (arr.length == 1)
+					arr = names.get(j).split("/");
+				for (int i = 0; i < arr.length; i++) {
+					String filename = arr[i];
+					Long filesize = null;     //null 表示为文件夹
+					if (i == arr.length - 1) {      //叶子节点，即文件，包含文件大小
+						filesize = sizes.get(j);
+					}
+					Node node = new Node(cur, i == 0 ? 0 : parent, filename, filesize, j);
+					if (!nodes.contains(node)) {
+						nodes.add(node);
+						parent = cur;
+					} else {
+						parent = nodes.get(nodes.indexOf(node)).getNid();
+					}
+					cur++;
+				}
+			}
+			tree = new Tree(name);
+			tree.createTree(nodes);
 		}
 	}
 
-	public void setTargetFile(File file) throws IllegalArgumentException {
-		if (file == null) {
-			throw new IllegalArgumentException("The file cannot be null");
-		} else if (this.filenames.length == 1 && file.isDirectory()) {
-			throw new IllegalArgumentException("This torrent is downloading a file, the actual file should be set here and not a directory");
-		} else {
-			this.file = file;
-		}
-	}
-
-	public String getInfoHash() {
-		return this.infoHash;
-	}
-
-	public String getHexHash() {
-		return this.hexHash;
-	}
-
-	public long[] getLengths() {
-		return this.lengths;
-	}
-
-	public int getPieceLength() {
-		return this.pieceLength;
-	}
-
-	public String getTracker() {
-		return this.tracker;
-	}
-
-	public String[] getPieces() {
-		return this.pieces;
-	}
-
-	public int getNumPieces() {
-		return this.numPieces;
-	}
-
-	public String[] getFilenames() {
-		return this.filenames;
-	}
-
-	public String getName() {
-		return this.name;
-	}
-
-	public File getTargetFile() {
-		return this.file;
-	}
-
-	public boolean isMultiFile() {
-		return this.lengths.length != 1;
-	}
-
-	public long getTotalLength() {
-		return this.total;
-	}
-
-	public void save(File file) throws IOException {
-		FileOutputStream fos = new FileOutputStream(file);
-		fos.write(this.torrentData);
-		fos.flush();
-		fos.close();
-	}
-
-	public boolean equals(Object other) {
-		if (this == other) {
-			return true;
-		} else {
-			return other instanceof TorrentFile ? this.infoHash.equals(((TorrentFile)other).infoHash) : false;
-		}
-	}
-
-	public int hashCode() {
-		return this.infoHash.hashCode();
-	}
-
-	public Optional<Torrent> toEntity() {
+	public Torrent toEntity() {
+		if (tree == null)
+			return null;
 		Torrent torrent = Torrent.builder()
 				.infoHash(infoHash)
+				.fileType(fileType)
+				.filesize(total)
+				.createDate(createDate)
+				.files(JSON.toJSONString(tree))
 				.build();
-		return Optional.ofNullable(torrent);
+		return torrent;
 	}
 }

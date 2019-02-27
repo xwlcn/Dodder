@@ -5,18 +5,21 @@ import cc.dodder.common.entity.TorrentFile;
 import cc.dodder.common.util.ByteUtil;
 import cc.dodder.common.util.bencode.BencodingUtils;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.codec.binary.StringUtils;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /***
@@ -28,24 +31,25 @@ import java.util.function.Consumer;
 @Slf4j
 public class PeerWireClient {
 
-	private Map<String, Object> map = new HashMap<>();
+	private Map<String, Object> map;
 
 	private Socket socket;
-	private BufferedInputStream in;
-	private BufferedOutputStream out;
+	private InputStream in;
+	private OutputStream out;
 	private int protocolLen;
 	private int ut_metadata;        //extended message ID
 	private int metadata_size;
 	private int pieces;
-	private byte[] metadata;
+	private ByteBuf metadata;
+	private String hexHash;
 
-	private byte[] readBuff = new byte[1024];
-	private ByteBuf cachedBuff = Unpooled.buffer(22 * 1024);
+	private byte[] readBuff;
+	private ByteBuf cachedBuff;
 
 	private int nextSize;
 	private NextFunction next;
 
-	private Optional<Torrent> torrent;
+	private Torrent torrent;
 
 	/**
 	 * 下载完成监听器
@@ -56,19 +60,26 @@ public class PeerWireClient {
 		this.onFinishedListener = listener;
 	}
 
+
 	public void downloadMetadata(InetSocketAddress address, byte[] infoHash) {
+
+		hexHash = ByteUtil.byteArrayToHex(infoHash);
 		socket = new Socket();
 		try {
 			socket.connect(address, Constants.CONNECT_TIMEOUT);
 			socket.setSoTimeout(Constants.READ_WRITE_TIMEOUT);
 
-			in = new BufferedInputStream(socket.getInputStream());
-			out = new BufferedOutputStream(socket.getOutputStream());
+			in = socket.getInputStream();
+			out = socket.getOutputStream();
 
 			setNext(1, onProtocolLen);
 			sendHandShake(infoHash);
 
-			int len;
+			map = new HashMap<>();
+			readBuff = new byte[1024];
+			cachedBuff = Unpooled.buffer(20 * 1024);
+
+			int len = -1;
 			while (!socket.isClosed() && (len = in.read(readBuff)) != -1) {
 				cachedBuff.writeBytes(readBuff, 0, len);
 				handleMessage();
@@ -77,7 +88,8 @@ public class PeerWireClient {
 			//e.printStackTrace();
 		} finally {
 			destroy();
-			torrent.ifPresent(onFinishedListener);
+			if (onFinishedListener != null)
+				onFinishedListener.accept(torrent);
 		}
 	}
 
@@ -129,9 +141,9 @@ public class PeerWireClient {
 	private void resolvePiece(byte[] buff) {
 		String str = new String(buff, StandardCharsets.ISO_8859_1);
 		int pos = str.indexOf("ee") + 2;
-		Map map = BencodingUtils.decode(str.substring(0, pos).getBytes(StandardCharsets.ISO_8859_1));
 		byte[] piece_metadata = Arrays.copyOfRange(buff, pos, buff.length);
 
+		/*Map map = BencodingUtils.decode(str.substring(0, pos).getBytes(StandardCharsets.ISO_8859_1));
 		if (!map.containsKey("msg_type") || !map.containsKey("piece")) {
 			destroy();
 			return;
@@ -142,8 +154,9 @@ public class PeerWireClient {
 			return;
 		}
 
-		int piece = ((BigInteger) map.get("piece")).intValue();
-		System.arraycopy(piece_metadata, 0, this.metadata, piece * 16 * 1024, piece_metadata.length);
+		int piece = ((BigInteger) map.get("piece")).intValue();*/
+		metadata.writeBytes(piece_metadata);
+		//System.arraycopy(piece_metadata, 0, this.metadata, piece * 16 * 1024, piece_metadata.length);
 		pieces--;
 
 		checkFinished();
@@ -152,20 +165,18 @@ public class PeerWireClient {
 	private void checkFinished() {
 		if (pieces <= 0) {
 			try {
-				TorrentFile torrentFile = new TorrentFile(new String(metadata, StandardCharsets.ISO_8859_1));
+				TorrentFile torrentFile = new TorrentFile(new String(ByteBufUtil.getBytes(metadata), StandardCharsets.ISO_8859_1), hexHash);
 				torrent = torrentFile.toEntity();
-			} catch (IOException e) {
+			} catch (Exception e) {
+				//e.printStackTrace();
 			}
 			//Map map = BencodingUtils.decode(Arrays.copyOfRange(metadata, 0, metadata_size));
 			destroy();
-			//if (map == null)
-			//	return;
-			//this.torrent = parseTorrent(map);
 		}
 	}
 
 	/**
-	* 解析 Torrent 文件信息，封装成对象
+	 * 解析 Torrent 文件信息，封装成对象
 	 *
 	 * 多文件Torrent的结构的树形图为：
 	 *
@@ -211,10 +222,10 @@ public class PeerWireClient {
 	 * │ ├─publisher-url.utf-8
 	 * │ └─publisher.utf-8
 	 * └─nodes
-	*
-	* @param map
-	* @return java.util.Optional<cc.dodder.common.entity.Torrent>
-	*/
+	 *
+	 * @param map
+	 * @return java.util.Optional<cc.dodder.common.entity.Torrent>
+	 */
 	/*private Optional<Torrent> parseTorrent(Map map) {
 		String encoding = "UTF-8";
 		Map<String, Object> info;
@@ -329,7 +340,7 @@ public class PeerWireClient {
 
 	private void requestPieces() throws Exception {
 
-		metadata = new byte[this.metadata_size];
+		metadata = Unpooled.buffer(this.metadata_size);
 
 		pieces = (int) Math.ceil(this.metadata_size / (16.0 * 1024));
 
@@ -416,9 +427,11 @@ public class PeerWireClient {
 			out.close();
 		} catch (Exception e) {
 		}
-		metadata = null;
 		readBuff = null;
-		cachedBuff.clear();
+		if (cachedBuff != null)
+			cachedBuff.clear();
+		if (metadata != null)
+			metadata.clear();
 	}
 
 

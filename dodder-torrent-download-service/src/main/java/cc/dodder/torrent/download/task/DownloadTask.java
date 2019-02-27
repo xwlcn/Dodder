@@ -1,9 +1,15 @@
 package cc.dodder.torrent.download.task;
 
+import cc.dodder.api.StoreFeignClient;
 import cc.dodder.common.entity.DownloadMsgInfo;
+import cc.dodder.common.entity.Result;
+import cc.dodder.common.util.ByteUtil;
 import cc.dodder.torrent.download.client.PeerWireClient;
 import cc.dodder.torrent.download.stream.MessageStreams;
 import cc.dodder.torrent.download.util.SpringContextUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.util.MimeTypeUtils;
@@ -16,6 +22,7 @@ import java.net.InetSocketAddress;
  * @author Mr.Xu
  * @since 2019-02-22 10:43
  **/
+@Slf4j
 public class DownloadTask implements Runnable {
 
 	private DownloadMsgInfo msgInfo;
@@ -27,9 +34,21 @@ public class DownloadTask implements Runnable {
 
 	@Override
 	public void run() {
+		StoreFeignClient storeFeignClient = (StoreFeignClient) SpringContextUtil.getBean(StoreFeignClient.class);
+		Result result = storeFeignClient.existHash(ByteUtil.byteArrayToHex(msgInfo.getInfoHash()));
+		if (result.getStatus() == HttpStatus.NO_CONTENT.value())
+			return;
+
 		PeerWireClient wireClient = new PeerWireClient();
 		//设置下载完成监听器
 		wireClient.setOnFinishedListener((torrent) -> {
+			RedisTemplate redisTemplate = (RedisTemplate) SpringContextUtil.getBean("redisTemplate");
+			if (torrent == null) {  //下载失败
+				redisTemplate.delete(msgInfo.getInfoHash());
+				return;
+			}
+			redisTemplate.persist(msgInfo.getInfoHash());
+			log.info("[{}:{}] Download torrent success, info hash is {}", msgInfo.getIp(), msgInfo.getPort(), torrent.getInfoHash());
 			messageStreams = (MessageStreams) SpringContextUtil.getBean(MessageStreams.class);
 			//丢进 kafka 消息队列进行入库操作
 			messageStreams.torrentMessageOutput()

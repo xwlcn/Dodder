@@ -1,8 +1,8 @@
 package cc.dodder.api;
 
+import cc.dodder.common.entity.Result;
 import cc.dodder.config.FeignConfig;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -16,5 +16,5 @@ public interface StoreFeignClient {
      * @return org.springframework.http.ResponseEntity
      */
     @GetMapping("/exist/hash/{infoHash}")
-    ResponseEntity existHash(@PathVariable("infoHash") String infoHash);
+    Result existHash(@PathVariable("infoHash") String infoHash);
 }

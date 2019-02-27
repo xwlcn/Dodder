@@ -11,8 +11,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.event.ContextClosedEvent;
 
 import java.net.InetSocketAddress;
 import java.util.HashMap;
@@ -27,7 +29,7 @@ import java.util.Set;
  **/
 @Configuration
 @ConfigurationProperties(prefix = "netty")
-public class NettyConfig {
+public class NettyConfig implements ApplicationListener<ContextClosedEvent> {
 
 	@Value("${netty.udp.port}")
 	private int udpPort;
@@ -38,6 +40,8 @@ public class NettyConfig {
 	@Value("${netty.so.sndbuf}")
 	private int sndbuf;
 
+	private EventLoopGroup group;
+
 
 	@Autowired
 	@Qualifier("channelInitializer")
@@ -45,8 +49,9 @@ public class NettyConfig {
 
 	@Bean(name = "serverBootstrap")
 	public Bootstrap bootstrap() {
+		group = group();
 		Bootstrap b = new Bootstrap();
-		b.group(group())
+		b.group(group)
 				.channel(NioDatagramChannel.class)
 				.handler(channelInitializer);
 		Map<ChannelOption<?>, Object> tcpChannelOptions = udpChannelOptions();
@@ -58,7 +63,7 @@ public class NettyConfig {
 		return b;
 	}
 
-	@Bean(name = "group", destroyMethod = "shutdownGracefully")
+	@Bean(name = "group")
 	public EventLoopGroup group() {
 		return new NioEventLoopGroup();
 	}
@@ -76,5 +81,12 @@ public class NettyConfig {
 		options.put(ChannelOption.SO_RCVBUF, rcvbuf);
 		options.put(ChannelOption.SO_SNDBUF, sndbuf);
 		return options;
+	}
+
+	@Override
+	public void onApplicationEvent(ContextClosedEvent contextClosedEvent) {
+		if(contextClosedEvent.getApplicationContext().getParent() == null) {
+			group.shutdownGracefully();
+		}
 	}
 }

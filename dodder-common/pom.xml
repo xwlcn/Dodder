@@ -6,6 +6,7 @@
         <artifactId>dodder</artifactId>
         <groupId>cc.dodder</groupId>
         <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -22,14 +23,18 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
         </dependency>
-    </dependencies>
+        <!-- https://mvnrepository.com/artifact/com.alibaba/fastjson -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.56</version>
+        </dependency>
+        <dependency>
+            <groupId>com.googlecode.juniversalchardet</groupId>
+            <artifactId>juniversalchardet</artifactId>
+            <version>1.0.3</version>
+        </dependency>
 
-    <repositories>
-        <repository>
-            <id>jabylon-maven</id>
-            <name>jabylon</name>
-            <url>http://www.jabylon.org/maven/</url>
-        </repository>
-    </repositories>
+    </dependencies>
 
 </project>

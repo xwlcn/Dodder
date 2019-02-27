@@ -31,6 +31,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 
 @Slf4j
@@ -58,7 +59,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 
 		Map<String, ?> map = BencodingUtils.decode(buff);
 
-		if (map == null)
+		if (map == null || map.get("y") == null)
 			return;
 
 		String y = new String((byte[]) map.get("y"));
@@ -84,7 +85,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		String q = new String((byte[]) map.get("q"));
 		//query params
 		Map<String, ?> a = (Map<String, ?>) map.get("a");
-		log.info("on query, query name is {}", q);
+		//log.info("on query, query name is {}", q);
 		switch (q) {
 			case "ping"://ping Query = {"t":"aa", "y":"q", "q":"ping", "a":{"id":"发送者ID"}}
 				responsePing(t, sender);
@@ -113,7 +114,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		r.put("id", DHTServer.SELF_NODE_ID);
 		DatagramPacket packet = createPacket(t, "r", r, sender);
 		dhtServer.sendKRPC(packet);
-		log.info("response ping[{}]", sender);
+		//log.info("response ping[{}]", sender);
 	}
 
 	/**
@@ -129,7 +130,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		r.put("nodes", new byte[]{});
 		DatagramPacket packet = createPacket(t, "r", r, sender);
 		dhtServer.sendKRPC(packet);
-		log.info("response find_node[{}]", sender);
+		//log.info("response find_node[{}]", sender);
 	}
 
 	/**
@@ -146,7 +147,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		r.put("id", NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, info_hash));
 		DatagramPacket packet = createPacket(t, "r", r, sender);
 		dhtServer.sendKRPC(packet);
-		log.info("response get_peers[{}]", sender);
+		//log.info("response get_peers[{}]", sender);
 	}
 
 	/**
@@ -181,10 +182,11 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		dhtServer.sendKRPC(packet);
 		// 将 info_hash 放进消息队列
 		if (token.length == 2 && info_hash[0] == token[0] && info_hash[1] == token[1]) {    //check token
-			log.error("info_hash[AnnouncePeer] : {}:{} - {}", sender.getHostString(), port, ByteUtil.byteArrayToHex(info_hash));
 			//使用 redis 将消息队列去重
 			if (redisTemplate.opsForValue().getAndSet(info_hash, new byte[0]) != null)
 				return;
+			redisTemplate.expire(info_hash, 5, TimeUnit.MINUTES);
+			log.error("info_hash[AnnouncePeer] : {}:{} - {}", sender.getHostString(), port, ByteUtil.byteArrayToHex(info_hash));
 			messageStreams.downloadMessageOutput()
 					.send(MessageBuilder
 							.withPayload(new DownloadMsgInfo(sender.getHostString(), port, info_hash))
@@ -236,7 +238,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 				byte[] nid = new byte[20];
 				System.arraycopy(nodes, i, nid, 0, 20);
 				NODES_QUEUE.offer(new Node(nid, address));
-				log.info("get node address=[{}] ", address);
+				//log.info("get node address=[{}] ", address);
 			} catch (Exception e) {
 				log.error("", e);
 			}
