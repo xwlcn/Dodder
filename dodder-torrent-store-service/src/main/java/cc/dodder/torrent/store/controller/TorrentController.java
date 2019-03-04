@@ -67,7 +67,7 @@ public class TorrentController implements StoreFeignClient {
 		Optional<Torrent> torrent = torrentService.findById(infoHash);
 
 		Result<TorrentVO> result = Result.ok(TorrentVO.builder()
-				.torrent(torrent.orElseGet(null)).build());
+				.torrent(torrent.orElse(null)).build());
 		torrent.ifPresent(t -> {
 			Pageable pageable = PageRequest.of(0, 10);
 			Page<Torrent> similar = torrentService.findSimilar(t, pageable);

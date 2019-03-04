@@ -3,6 +3,7 @@ package cc.dodder.common.entity;
 
 import cc.dodder.common.util.FileTypeUtil;
 import cc.dodder.common.util.StringUtil;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +12,7 @@ public class Tree {
 
 	private Node root;
 
+	@JsonIgnore
 	private List<Node> leaves;
 	
 	public Tree() {
@@ -63,6 +65,7 @@ public class Tree {
 	 * 构建叶子节点数组，实际上就是构建子文件列表
 	 * @return
 	 */
+	@JsonIgnore
 	public List<Node> getLeafList() {
 		leaves = new ArrayList<>();
 		deep(root);
@@ -85,7 +88,6 @@ public class Tree {
 	public String getHtml(Node tnode) {
 		
 		if (tnode.getChildren() == null) {	//叶子节点
-			System.out.println(tnode);
 			return "<li><span class=\"" + FileTypeUtil.getFileType(tnode.getFilename()) + "\">" + tnode.getFilename()
 					+ ((tnode.getFilesize() != null) ? "<small>(" + StringUtil.formatSize(tnode.getFilesize()) + ")" + "</small>" : "")
 					+ "</span></li>";

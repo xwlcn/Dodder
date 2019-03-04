@@ -19,9 +19,9 @@ public class Torrent implements Serializable {
 
     @Id
     private String infoHash;
-    @Field(searchAnalyzer = "ik_max_word",analyzer = "ik_smart")
+    @Field(searchAnalyzer = "ik_smart",analyzer = "ik_smart")
     private String fileType = "其他";
-    @Field(searchAnalyzer = "ik_max_word",analyzer = "ik_smart")
+    @Field(searchAnalyzer = "ik_smart",analyzer = "ik_smart")
     private String fileName;
     @Field(index = false)
     private long fileSize;
