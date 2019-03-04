@@ -14,39 +14,41 @@
 <div th:replace="common/header :: header"></div>
 <div class="layui-container dodder-body">
     <pre th:replace="common/banner :: banner"></pre>
-    <div class="layui-col-md9">
-        <div class="layui-card dodder-box-shadow">
-            <div class="layui-card-header dodder-nowrap">
-                <button class="layui-btn layui-btn-xs" onclick="javascript :history.back(-1);">返回</button>
-                &nbsp;<b th:text="${torrent.fileName}" th:title="${torrent.fileName}"></b>
-            </div>
-            <div class="layui-card-body">
-                <p class="layui-icon layui-icon-link dodder-magnet-link"> 下载链接：<a
-                        th:href="${'magnet:?xt=urn:btih:' + torrent.infoHash}"
-                        th:text="${'magnet:?xt=urn:btih:' + torrent.infoHash}"></a></p>
-                <hr class="layui-bg-red">
-                <div class="layui-anim layui-anim-up dodder-torrent-info" th:utext="${treeFiles}"></div>
-                <blockquote class="layui-elem-quote" th:unless="${#lists.isEmpty(similar)}">相关推荐</blockquote>
-                <ul class="layui-timeline">
-                    <li class="layui-timeline-item" th:each="t : ${similar}">
-                        <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
-                        <div class="layui-timeline-content">
-                            <a th:href="@{/info/__${t.infoHash}__}" class="layui-timeline-title dodder-green"
-                               th:text="${t.fileName}"></a>
-                            <p class="layui-text">
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md9">
+            <div class="layui-card dodder-box-shadow">
+                <div class="layui-card-header dodder-nowrap">
+                    <button class="layui-btn layui-btn-xs" onclick="javascript :history.back(-1);">返回</button>
+                    &nbsp;<b th:text="${torrent.fileName}" th:title="${torrent.fileName}"></b>
+                </div>
+                <div class="layui-card-body">
+                    <p class="layui-icon layui-icon-link dodder-magnet-link"> 下载链接：<a
+                            th:href="${'magnet:?xt=urn:btih:' + torrent.infoHash}"
+                            th:text="${'magnet:?xt=urn:btih:' + torrent.infoHash}"></a></p>
+                    <hr class="layui-bg-red">
+                    <div class="layui-anim layui-anim-up dodder-torrent-info" th:utext="${treeFiles}"></div>
+                    <blockquote class="layui-elem-quote" th:unless="${#lists.isEmpty(similar)}">相关推荐</blockquote>
+                    <ul class="layui-timeline">
+                        <li class="layui-timeline-item" th:each="t : ${similar}">
+                            <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+                            <div class="layui-timeline-content">
+                                <a th:href="@{/info/__${t.infoHash}__}" class="layui-timeline-title dodder-green"
+                                   th:text="${t.fileName}"></a>
+                                <p class="layui-text" style="word-break:break-all;">
                                     <span th:each="node : ${#dodderUtil.getFileList(t)}" th:remove="tag">
                                         <span class="layui-badge-dot layui-bg-cyan"></span> <span
                                             th:text="${node.filename}" th:remove="tag"></span><br>
                                     </span>
-                            </p>
-                        </div>
-                    </li>
-                </ul>
+                                </p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="layui-col-md3 layui-col-space15 dodder-pull-right">
-        <div th:replace="common/profile :: profile"></div>
+        <div class="layui-col-md3">
+            <div th:replace="common/profile :: profile"></div>
+        </div>
     </div>
 </div>
 <footer th:replace="common/footer :: footer"></footer>

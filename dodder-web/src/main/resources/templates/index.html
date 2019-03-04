@@ -12,12 +12,13 @@
 <div th:replace="common/header :: header"></div>
 <div class="layui-container dodder-body">
     <pre th:replace="common/banner :: banner"></pre>
-    <div class="layui-col-md9">
-        <div class="layui-card dodder-box-shadow">
-            <div class="layui-card-header">资源列表</div>
-            <div class="layui-card-body dodder-tags layui-text">
-                分类：
-                <span class="layui-breadcrumb" lay-separator="|">
+    <div class="layui-col-space15">
+        <div class="layui-col-md9">
+            <div class="layui-card dodder-box-shadow">
+                <div class="layui-card-header">资源列表</div>
+                <div class="layui-card-body dodder-tags layui-text">
+                    分类：
+                    <span class="layui-breadcrumb" lay-separator="|">
                         <a th:id="${#strings.isEmpty(searchRequest.fileType)} ? 'dodder-active' : ''"
                            th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,)}">全部</a>
                       <a th:id="${searchRequest.fileType == '音频'} ? 'dodder-active' : ''"
@@ -35,22 +36,22 @@
                       <a th:id="${searchRequest.fileType == '软件'} ? 'dodder-active' : ''"
                          th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='软件')}">软件</a>
                     </span>
-            </div>
-            <table class="layui-card-body layui-table" lay-skin="nob" lay-even style="margin-top: 0">
-                <colgroup>
-                    <col width="48">
-                    <col>
-                </colgroup>
-                <tbody>
-                <tr th:each="torrent : ${result.data.list}">
-                    <td>
-                        <i class="layui-icon layui-icon-file" style="font-size: 30px; color: #1E9FFF;"></i>
-                    </td>
-                    <td>
-                        <div>
-                            <a th:href="@{/info/__${torrent.infoHash}__}" th:text="${torrent.fileName}"
-                               th:title="${torrent.fileName}"></a>
-                            <span class="layui-row">
+                </div>
+                <table class="layui-card-body layui-table" lay-skin="nob" lay-even style="margin-top: 0">
+                    <colgroup>
+                        <col width="48">
+                        <col>
+                    </colgroup>
+                    <tbody>
+                    <tr th:each="torrent : ${result.data.list}">
+                        <td>
+                            <i class="layui-icon layui-icon-file" style="font-size: 30px; color: #1E9FFF;"></i>
+                        </td>
+                        <td>
+                            <div>
+                                <a th:href="@{/info/__${torrent.infoHash}__}" th:text="${torrent.fileName}"
+                                   th:title="${torrent.fileName}"></a>
+                                <span class="layui-row">
                                     <i class="layui-icon layui-icon-note dodder-pull-left"
                                        style="font-size: 12px; color: #1E9FFF;margin-right: 8px;"></i>
                                     <ul class="dodder-tag-list"
@@ -60,16 +61,16 @@
                                     <span class="layui-badge layui-bg-gray dodder-pull-left"
                                           th:text="${#dodderUtil.formatSize(torrent.fileSize)}"></span>
                                 </span>
-                        </div>
-                        <div>
+                            </div>
+                            <div class="layui-hide-xs">
                                 <span class="layui-badge"
                                       th:text="${#calendars.format(torrent.createDate,'yyyy-MM-dd HH:mm:ss')}"></span>
-                        </div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-            <pre class="dodder-search-result" th:unless="${result.data.total > 0}">
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+                <pre class="dodder-search-result" th:unless="${result.data.total > 0}">
 _  _      ___    _  _
 | || |    / _ \  | || |
 | || |_  | | | | | || |_
@@ -78,12 +79,13 @@ _  _      ___    _  _
 
     没有找到相关记录！
             </pre>
-            <div id="dodder-page"></div>
+                <div id="dodder-page"></div>
+            </div>
         </div>
-    </div>
-    <div class="layui-col-md3 layui-col-space15 dodder-pull-right">
-        <div th:replace="common/profile :: profile"></div>
-        <div th:replace="common/status :: status"></div>
+        <div class="layui-col-md3 layui-col-space15">
+            <div th:replace="common/profile :: profile"></div>
+            <div th:replace="common/status :: status"></div>
+        </div>
     </div>
 </div>
 <footer th:replace="common/footer :: footer"></footer>

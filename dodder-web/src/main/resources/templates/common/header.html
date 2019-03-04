@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-cn" xmlns:th="http://www.thymeleaf.org">
-<div class="dodder-fly-header" th:fragment="header">
-    <ul class="layui-nav layui-bg-green" lay-filter="">
-        <li class="layui-nav-item"><a th:href="@{/}">菟丝子资源社区</a></li>
-        <li class="layui-container layui-inline">
-            <div class="layui-input-inline dodder-pull-right">
-                <input th:value="${searchRequest != null ? searchRequest.fileName : ''}" type="text" name="number" autocomplete="off" class="dodder-search-input layui-input" id="keyword">
-                <button class="layui-btn layui-btn-sm layui-btn-danger dodder-search-btn" id="search-btn">搜索</button>
-            </div>
-        </li>
-    </ul>
+<div class="dodder-fly-header layui-bg-green" th:fragment="header">
+    <h3><a th:href="@{/}">菟丝子资源社区</a></h3>
+    <div class="layui-container">
+        <div class="dodder-search-box dodder-pull-right">
+            <input placeholder="请输入想搜索的内容" th:value="${searchRequest != null ? searchRequest.fileName : ''}" type="text" name="number"
+                   autocomplete="off" class="dodder-search-input layui-input" id="keyword">
+            <button class="layui-inline layui-btn layui-btn-sm layui-btn-danger dodder-search-btn" id="search-btn">搜 索</button>
+        </div>
+    </div>
 </div>
 </html>

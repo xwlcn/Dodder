@@ -85,8 +85,9 @@ public class Tree {
 	public String getHtml(Node tnode) {
 		
 		if (tnode.getChildren() == null) {	//叶子节点
+			System.out.println(tnode);
 			return "<li><span class=\"" + FileTypeUtil.getFileType(tnode.getFilename()) + "\">" + tnode.getFilename()
-					+ "<small>(" + StringUtil.formatSize(tnode.getFilesize()) + ")" + "</small>"
+					+ ((tnode.getFilesize() != null) ? "<small>(" + StringUtil.formatSize(tnode.getFilesize()) + ")" + "</small>" : "")
 					+ "</span></li>";
 		}
 		
