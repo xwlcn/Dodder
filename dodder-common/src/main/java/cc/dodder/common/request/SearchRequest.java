@@ -15,7 +15,7 @@ public class SearchRequest {
 	private String fileName;
 	private String fileType;
 	private String sortBy;
-	private String order = "desc";
+	private String order;
 
 	private Integer page;
 	private Integer limit = 20;

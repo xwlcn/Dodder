@@ -37,7 +37,7 @@
                          th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='软件')}">软件</a>
                     </span>
                 </div>
-                <table class="layui-card-body layui-table" lay-skin="nob" lay-even style="margin-top: 0">
+                <table class="layui-card-body layui-table dodder-torrent-list" lay-skin="nob" lay-even>
                     <colgroup>
                         <col width="48">
                         <col>
@@ -49,8 +49,8 @@
                         </td>
                         <td>
                             <div>
-                                <a th:href="@{/info/__${torrent.infoHash}__}" th:text="${torrent.fileName}"
-                                   th:title="${torrent.fileName}"></a>
+                                <a th:href="@{/info/__${torrent.infoHash}__}" th:utext="${torrent.fileName}"
+                                   th:title="${#strings.isEmpty(searchRequest.fileName) ? torrent.fileName : #strings.multipleReplace(torrent.fileName, {'<em>', '</em>'}, {'',''})}"></a>
                                 <span class="layui-row">
                                     <i class="layui-icon layui-icon-note dodder-pull-left"
                                        style="font-size: 12px; color: #1E9FFF;margin-right: 8px;"></i>

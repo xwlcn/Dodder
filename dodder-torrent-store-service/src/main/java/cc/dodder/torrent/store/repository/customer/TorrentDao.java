@@ -1,6 +1,9 @@
 package cc.dodder.torrent.store.repository.customer;
 
 import cc.dodder.common.entity.Torrent;
+import cc.dodder.common.request.SearchRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.io.IOException;
 
@@ -19,4 +22,12 @@ public interface TorrentDao {
 	* @return void
 	*/
 	void upsert(Torrent torrent) throws IOException;
+
+	/**
+	* 分页搜索
+	*
+	* @param request, pageable
+	* @return org.springframework.data.domain.Page<cc.dodder.common.entity.Torrent>
+	*/
+	Page<Torrent> query(SearchRequest request, Pageable pageable);
 }

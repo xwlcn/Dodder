@@ -105,6 +105,15 @@ input::-webkit-input-placeholder {color: #eee;}
     float: left;
 }
 
+.dodder-torrent-list {
+    margin-top: 0;
+}
+
+.dodder-torrent-list em {
+    color: #f00;
+    font-style: normal;
+}
+
 .dodder-resource-status p {
     color: #999;
 }
