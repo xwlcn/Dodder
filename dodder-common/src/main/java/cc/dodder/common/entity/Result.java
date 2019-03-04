@@ -5,27 +5,38 @@ import lombok.Setter;
 import org.apache.http.HttpStatus;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 
 @Getter @Setter
-public class Result implements Serializable {
+public class Result<T> implements Serializable {
 
 	private int status;
 	private String msg;
-	private Map extra;
-
-	public Result(int status, String msg) {
-		this.status = status;
-		this.msg = msg;
-	}
+	private T data;
 
 	public Result(int status) {
 		this.status = status;
 	}
 
+	private Result(int status, String msg, T data) {
+		this.status = status;
+		this.msg = msg;
+		this.data = data;
+	}
+
 	public static Result ok() {
-		return new Result(HttpStatus.SC_OK);
+		return ok(null);
+	}
+
+	public static Result ok(String msg) {
+		return ok(msg, null);
+	}
+
+	public static <T>Result<T> ok(T data) {
+		return ok(null, data);
+	}
+
+	public static <T>Result<T> ok(String msg, T data) {
+		return new Result<>(HttpStatus.SC_OK, msg, data);
 	}
 
 	public static Result noContent() {
@@ -36,17 +47,4 @@ public class Result implements Serializable {
 		return new Result(HttpStatus.SC_NOT_FOUND);
 	}
 
-	public static Result ok(String msg) {
-		return new Result(HttpStatus.SC_OK, msg);
-	}
-
-	public Result put(String key, Object value) {
-		if (extra == null) {
-			synchronized (extra) {
-				extra = new HashMap();
-			}
-		}
-		extra.put(key, value);
-		return this;
-	}
 }

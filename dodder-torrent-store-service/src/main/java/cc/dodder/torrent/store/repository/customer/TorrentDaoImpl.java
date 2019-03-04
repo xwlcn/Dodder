@@ -16,7 +16,7 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
  * 自定义扩展 Torrent Dao 实现类
  *
  * @author Mr.Xu
- * @since 2019-02-25 11:09
+ * @date 2019-02-25 11:09
  **/
 public class TorrentDaoImpl implements TorrentDao {
 
@@ -29,8 +29,9 @@ public class TorrentDaoImpl implements TorrentDao {
 
 		XContentBuilder source = jsonBuilder()
 				.startObject()
+				.field("fileName", torrent.getFileName())
 				.field("fileType", torrent.getFileType())
-				.field("filesize", torrent.getFilesize())
+				.field("fileSize", torrent.getFileSize())
 				.field("createDate", torrent.getCreateDate())
 				.field("files", torrent.getFiles())
 				.endObject();

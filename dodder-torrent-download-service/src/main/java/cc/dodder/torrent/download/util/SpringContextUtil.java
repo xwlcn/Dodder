@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
  * Spring 容器上下文工具类，用于在线程中获取 Bean
  *
  * @author Mr.Xu
- * @since 2019-02-22 10:47
+ * @date 2019-02-22 10:47
  **/
 @Component
 public class SpringContextUtil implements ApplicationContextAware {

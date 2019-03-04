@@ -14,9 +14,9 @@ class Constants {
 
 	public static final byte BT_MSG_ID = 20 & 0xff;
 	public static final int EXT_HANDSHAKE_ID = 0;
-	public static final int CONNECT_TIMEOUT = 1500;
+	public static final int CONNECT_TIMEOUT = 2000;
 	public static final int READ_WRITE_TIMEOUT = 4000;
-	public static final int MAX_METADATA_SIZE = 1024 * 1024 * 10;        //最大 5M
+	public static final int MAX_METADATA_SIZE = 1024 * 1024 * 5;        //最大 1M
 
 	public static final byte[] PEER_ID = NodeIdUtil.createRandomNodeId();
 

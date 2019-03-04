@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-cn" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/layui/css/layui.css}">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title>菟丝子资源社区</title>
+</head>
+<body>
+<div th:replace="common/header :: header"></div>
+<div class="layui-container dodder-body">
+    <pre th:replace="common/banner :: banner"></pre>
+    <div class="layui-col-md9">
+        <div class="layui-card dodder-box-shadow">
+            <div class="layui-card-header">资源列表</div>
+            <div class="layui-card-body dodder-tags layui-text">
+                分类：
+                <span class="layui-breadcrumb" lay-separator="|">
+                        <a th:id="${#strings.isEmpty(searchRequest.fileType)} ? 'dodder-active' : ''"
+                           th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,)}">全部</a>
+                      <a th:id="${searchRequest.fileType == '音频'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='音频')}">音频</a>
+                        <a th:id="${searchRequest.fileType == '视频'} ? 'dodder-active' : ''"
+                           th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='视频')}">视频</a>
+                      <a th:id="${searchRequest.fileType == '图片'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='图片')}">图片</a>
+                      <a th:id="${searchRequest.fileType == '文档'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='文档')}">文档</a>
+                      <a th:id="${searchRequest.fileType == '压缩'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='压缩')}">压缩文件</a>
+                      <a th:id="${searchRequest.fileType == '镜像'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='镜像')}">镜像文件</a>
+                      <a th:id="${searchRequest.fileType == '软件'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='软件')}">软件</a>
+                    </span>
+            </div>
+            <table class="layui-card-body layui-table" lay-skin="nob" lay-even style="margin-top: 0">
+                <colgroup>
+                    <col width="48">
+                    <col>
+                </colgroup>
+                <tbody>
+                <tr th:each="torrent : ${result.data.list}">
+                    <td>
+                        <i class="layui-icon layui-icon-file" style="font-size: 30px; color: #1E9FFF;"></i>
+                    </td>
+                    <td>
+                        <div>
+                            <a th:href="@{/info/__${torrent.infoHash}__}" th:text="${torrent.fileName}"
+                               th:title="${torrent.fileName}"></a>
+                            <span class="layui-row">
+                                    <i class="layui-icon layui-icon-note dodder-pull-left"
+                                       style="font-size: 12px; color: #1E9FFF;margin-right: 8px;"></i>
+                                    <ul class="dodder-tag-list"
+                                        th:each="type : ${#strings.arraySplit(torrent.fileType,',')}">
+                                        <li><a th:href="@{/(fileType=${type})}" th:text="${type}"></a></li>
+                                    </ul>
+                                    <span class="layui-badge layui-bg-gray dodder-pull-left"
+                                          th:text="${#dodderUtil.formatSize(torrent.fileSize)}"></span>
+                                </span>
+                        </div>
+                        <div>
+                                <span class="layui-badge"
+                                      th:text="${#calendars.format(torrent.createDate,'yyyy-MM-dd HH:mm:ss')}"></span>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <pre class="dodder-search-result" th:unless="${result.data.total > 0}">
+_  _      ___    _  _
+| || |    / _ \  | || |
+| || |_  | | | | | || |_
+|__   _| | |_| | |__   _|
+|_|    \___/     |_|
+
+    没有找到相关记录！
+            </pre>
+            <div id="dodder-page"></div>
+        </div>
+    </div>
+    <div class="layui-col-md3 layui-col-space15 dodder-pull-right">
+        <div th:replace="common/profile :: profile"></div>
+        <div th:replace="common/status :: status"></div>
+    </div>
+</div>
+<footer th:replace="common/footer :: footer"></footer>
+<script th:src="@{/layui/layui.all.js}"></script>
+<script th:src="@{/js/search.js}"></script>
+<script th:inline="javascript">
+    layui.use(['laypage', 'layer'], function () {
+        var laypage = layui.laypage;
+        if ([[${result.data.total <= 0}]])
+            return;
+        //执行一个laypage实例
+        laypage.render({
+            elem: 'dodder-page' //注意，这里的 test1 是 ID，不用加 # 号
+            , count: [[${result.data.total > 10000 ? 10000 : result.data.total}]] //数据总数，从服务端得到
+            , limit: [[${result.data.limit}]]
+            , curr: [[${result.data.page}]]
+            , jump: function (obj, first) {
+                //obj包含了当前分页的所有参数，比如：
+                console.log(obj.curr); //得到当前页，以便向服务端请求对应页的数据。
+                console.log(obj.limit); //得到每页显示的条数
+                //首次不执行
+                if (!first) {
+                    window.location.href = [[${#servletContext.getContextPath()}]] + '?page=' + obj.curr
+                        + [[${searchRequest.fileName != null ? '&fileName=' + searchRequest.fileName : ''}]]
+                        + [[${searchRequest.fileType != null ? '&fileType=' + searchRequest.fileType : ''}]];
+                }
+            }
+        });
+    });
+</script>
+</body>
+</html>

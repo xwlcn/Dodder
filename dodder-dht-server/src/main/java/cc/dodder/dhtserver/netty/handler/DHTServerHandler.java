@@ -1,6 +1,5 @@
 package cc.dodder.dhtserver.netty.handler;
 
-import cc.dodder.api.StoreFeignClient;
 import cc.dodder.common.entity.DownloadMsgInfo;
 import cc.dodder.common.util.ByteUtil;
 import cc.dodder.common.util.NodeIdUtil;
@@ -17,8 +16,6 @@ import io.netty.channel.socket.DatagramPacket;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
@@ -33,7 +30,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-
+/***
+ * 参见 Bittorrent 协议：
+ * http://www.bittorrent.org/beps/bep_0005.html
+ *
+ * @author Mr.Xu
+ **/
 @Slf4j
 @Component
 @ChannelHandler.Sharable
@@ -299,7 +301,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	/**
 	 * 查询 DHT 节点线程，用于持续获取新的 DHT 节点
 	 *
-	 * @since 2019/2/17
+	 * @date 2019/2/17
 	 **/
 	private Thread findNodeTask = new Thread() {
 

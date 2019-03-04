@@ -7,7 +7,7 @@ import java.util.Map;
  * 文件扩展名工具类
  *
  * @author Mr.Xu
- * @since 2019-02-22 15:11
+ * @date 2019-02-22 15:11
  **/
 public class ExtensionUtil {
 

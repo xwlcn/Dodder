@@ -1,0 +1,205 @@
+html {
+    height: 100%;
+    overflow-y:auto;
+    overflow-x: hidden;
+}
+
+body {
+    width: 100vw;
+    background-color: #F2F2F2;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.dodder-pull-left {
+    float: left;
+}
+
+.dodder-pull-right {
+    float: right;
+}
+
+.dodder-fly-header {
+    position: fixed;
+    z-index: 10000;
+    width: 100%;
+}
+
+.dodder-body {
+    padding-top: 60px!important;
+    padding-bottom: 15px!important;
+    flex: 1;
+}
+
+.dodder-logo {
+    text-shadow: 3px 3px 2px black, -3px -3px 2px white;
+}
+
+#dodder-active {
+    color: #f00!important;
+}
+
+.dodder-tags {
+    background: #F2F2F2;
+    border-bottom: 1px solid #f6f6f6;
+}
+
+.dodder-text-center {
+    width: 100%;
+    text-align: center;
+}
+
+.dodder-box-shadow {
+    -webkit-box-shadow: 0 0 5px rgba(37, 113, 156, 0.2);
+    box-shadow: 0 0 5px rgba(37, 113, 156, 0.2);
+}
+
+.dodder-tag-list {
+    list-style: none;
+    font-size: 12px;
+}
+
+.dodder-tag-list li {
+    margin-right: 5px;
+    float: left;
+}
+
+.dodder-resource-status p {
+    color: #999;
+}
+
+#dodder-page {
+    padding-left: 20px;
+}
+
+.dodder-torrent-info {
+    margin: 15px 0;
+    font-family: Verdana, helvetica, arial, sans-serif;
+    font-size: 12px;
+    background: #fff;
+    color: #333;
+    line-height: 1;
+}
+
+.dodder-nowrap {
+    word-break:keep-all;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis
+}
+
+.dodder-magnet-link a, .dodder-green {
+    color: #009688;
+}
+
+.dodder-search-input {
+    width: auto!important;
+    display: inline-block!important;
+    height: 30px!important;
+    border-radius: 0;
+}
+
+.dodder-search-btn {
+    float: right;
+    border-left: none;
+    border-radius: 0;
+}
+
+.dodder-search-result {
+    padding: 50px 0;
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+}
+
+footer {
+    padding: 20px 0;
+    border-top: 2px solid #009688;
+    font-size: small;
+    color: #999;
+    clear: both;
+    background: #fff;
+}
+
+.layui-container {
+    padding: 0;
+}
+
+.layui-nav {
+    border-radius: 0;
+}
+
+.layui-table tr td:nth-child(2) {
+    padding-left: 0;
+}
+
+.layui-table tr td:nth-child(2) div:first-child {
+    width: 80%;
+    float: left;
+    /*white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;*/
+}
+
+.layui-table tr td:nth-child(2) div:nth-child(2) {
+    width: 20%;
+    text-align: right;
+    float: left;
+    line-height: 40px;
+}
+
+.layui-table tr td:nth-child(2) div a {
+    width: 100%;
+    word-break: break-all;
+}
+
+.layui-table tr td:nth-child(3) {
+    text-align: right;
+}
+
+.layui-breadcrumb a:hover {
+    color: #f00!important;
+}
+
+/*treeview*/
+
+.filetree span {
+    padding: 3px 0 1px 16px;
+    display: block;
+}
+
+.filetree span.bticon {
+    padding: 3px 1px 01px 18px;
+    display: block;
+    background: url(../img/torrent.gif) 0 0 no-repeat;
+}
+
+.filetree span.image {
+    background: url(../img/image.gif) 0 0 no-repeat;
+}
+
+.filetree span.video {
+    background: url(../img/video.gif) 0 0 no-repeat;
+}
+
+.filetree span.subtitle {
+    background: url(../img/subtitle.gif) 0 0 no-repeat;
+}
+
+.filetree span.info {
+    background: url(../img/info.gif) 0 0 no-repeat;
+}
+
+.filetree span.word {
+    background: url(../img/word.gif) 0 0 no-repeat;
+}
+
+.filetree span.excel {
+    background: url(../img/excel.gif) 0 0 no-repeat;
+}
+
+.filetree li small {
+    padding-left: 5px;
+    color: #999;
+}

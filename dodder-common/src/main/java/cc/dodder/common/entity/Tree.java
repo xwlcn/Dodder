@@ -2,12 +2,16 @@ package cc.dodder.common.entity;
 
 
 import cc.dodder.common.util.FileTypeUtil;
+import cc.dodder.common.util.StringUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Tree {
 
 	private Node root;
+
+	private List<Node> leaves;
 	
 	public Tree() {
 		super();
@@ -54,11 +58,36 @@ public class Tree {
 			middlePrint(node);
 		}
 	}
+
+	/**
+	 * 构建叶子节点数组，实际上就是构建子文件列表
+	 * @return
+	 */
+	public List<Node> getLeafList() {
+		leaves = new ArrayList<>();
+		deep(root);
+		return leaves;
+	}
+
+	private void deep(Node tnode) {
+		if (tnode.getChildren() == null) {      //叶子节点
+			if (leaves.size() < 3)
+				leaves.add(tnode);
+			return;
+		}
+		if (leaves.size() >= 3)
+			return;
+		for (Node node : tnode.getChildren()) {
+			deep(node);
+		}
+	}
 	
 	public String getHtml(Node tnode) {
 		
 		if (tnode.getChildren() == null) {	//叶子节点
-			return "<li><span class=\"" + FileTypeUtil.getFileType(tnode.getFilename()) + "\">" + tnode.getFilename() + "</span></li>";
+			return "<li><span class=\"" + FileTypeUtil.getFileType(tnode.getFilename()) + "\">" + tnode.getFilename()
+					+ "<small>(" + StringUtil.formatSize(tnode.getFilesize()) + ")" + "</small>"
+					+ "</span></li>";
 		}
 		
 		String str = "";

@@ -62,11 +62,6 @@
 
     <repositories>
         <repository>
-            <id>jabylon-maven</id>
-            <name>jabylon</name>
-            <url>http://www.jabylon.org/maven/</url>
-        </repository>
-        <repository>
             <id>nexus-aliyun</id>
             <name>Nexus aliyun</name>
             <url>http://maven.aliyun.com/nexus/content/groups/public</url>

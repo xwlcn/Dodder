@@ -42,22 +42,28 @@ public class Node {
 		this.index = index;
 	}
 
-
 	@Override
-	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
-
-		Node node = (Node) o;
-
-		if (!filename.equals(node.filename)) return false;
-		return filesize.equals(node.filesize);
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((filename == null) ? 0 : filename.hashCode());
+		return result;
 	}
 
 	@Override
-	public int hashCode() {
-		int result = filename.hashCode();
-		result = 31 * result + filesize.hashCode();
-		return result;
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Node other = (Node) obj;
+		if (filename == null) {
+			if (other.filename != null)
+				return false;
+		} else if (!filename.equals(other.filename))
+			return false;
+		return true;
 	}
 }

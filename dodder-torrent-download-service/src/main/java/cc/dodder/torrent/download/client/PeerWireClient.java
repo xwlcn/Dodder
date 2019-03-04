@@ -1,29 +1,28 @@
 package cc.dodder.torrent.download.client;
 
+import cc.dodder.common.entity.Node;
 import cc.dodder.common.entity.Torrent;
-import cc.dodder.common.entity.TorrentFile;
+import cc.dodder.common.entity.Tree;
 import cc.dodder.common.util.ByteUtil;
+import cc.dodder.common.util.ExtensionUtil;
+import cc.dodder.common.util.StringUtil;
 import cc.dodder.common.util.bencode.BencodingUtils;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.util.codec.binary.StringUtils;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 
 /***
- * Peer Wire 协议客户端
+ * Peer Wire 协议客户端，参见协议：
+ * http://www.bittorrent.org/beps/bep_0009.html
  *
  * @author: Mr.Xu
  * @create: 2019-02-19 09:21
@@ -40,16 +39,18 @@ public class PeerWireClient {
 	private int ut_metadata;        //extended message ID
 	private int metadata_size;
 	private int pieces;
-	private ByteBuf metadata;
 	private String hexHash;
 
 	private byte[] readBuff;
-	private ByteBuf cachedBuff;
 
 	private int nextSize;
 	private NextFunction next;
 
 	private Torrent torrent;
+
+	private static ThreadLocal<PipedStream> cachedBuff = new ThreadLocal<>();
+
+	private byte[] metadata;
 
 	/**
 	 * 下载完成监听器
@@ -62,12 +63,13 @@ public class PeerWireClient {
 
 
 	public void downloadMetadata(InetSocketAddress address, byte[] infoHash) {
-
 		hexHash = ByteUtil.byteArrayToHex(infoHash);
 		socket = new Socket();
 		try {
 			socket.connect(address, Constants.CONNECT_TIMEOUT);
 			socket.setSoTimeout(Constants.READ_WRITE_TIMEOUT);
+			socket.setSoLinger(true, 0);
+			socket.setTcpNoDelay(true);
 
 			in = socket.getInputStream();
 			out = socket.getOutputStream();
@@ -76,16 +78,17 @@ public class PeerWireClient {
 			sendHandShake(infoHash);
 
 			map = new HashMap<>();
-			readBuff = new byte[1024];
-			cachedBuff = Unpooled.buffer(20 * 1024);
+			readBuff = new byte[256];
+			if (cachedBuff.get() == null) {
+				cachedBuff.set(new PipedStream());
+			}
 
 			int len = -1;
 			while (!socket.isClosed() && (len = in.read(readBuff)) != -1) {
-				cachedBuff.writeBytes(readBuff, 0, len);
+				cachedBuff.get().write(readBuff, 0, len);
 				handleMessage();
 			}
 		} catch (Exception e) {
-			//e.printStackTrace();
 		} finally {
 			destroy();
 			if (onFinishedListener != null)
@@ -113,10 +116,9 @@ public class PeerWireClient {
 	}
 
 	private void handleMessage() throws Exception {
-		while (cachedBuff.readableBytes() >= nextSize) {
+		while (cachedBuff.get().available() >= nextSize) {
 			byte[] buff = new byte[nextSize];
-			cachedBuff.readBytes(buff);
-			cachedBuff.discardReadBytes();
+			cachedBuff.get().read(buff, 0, nextSize);
 			next.doNext(buff);
 		}
 	}
@@ -143,20 +145,11 @@ public class PeerWireClient {
 		int pos = str.indexOf("ee") + 2;
 		byte[] piece_metadata = Arrays.copyOfRange(buff, pos, buff.length);
 
-		/*Map map = BencodingUtils.decode(str.substring(0, pos).getBytes(StandardCharsets.ISO_8859_1));
-		if (!map.containsKey("msg_type") || !map.containsKey("piece")) {
-			destroy();
-			return;
-		}
+		Map map = BencodingUtils.decode(str.substring(0, pos).getBytes(StandardCharsets.ISO_8859_1));
 
-		if (((BigInteger) map.get("msg_type")).intValue() != 1) {
-			destroy();
-			return;
-		}
+		int piece = ((BigInteger) map.get("piece")).intValue();
+		System.arraycopy(piece_metadata, 0, this.metadata, piece * 16 * 1024, piece_metadata.length);
 
-		int piece = ((BigInteger) map.get("piece")).intValue();*/
-		metadata.writeBytes(piece_metadata);
-		//System.arraycopy(piece_metadata, 0, this.metadata, piece * 16 * 1024, piece_metadata.length);
 		pieces--;
 
 		checkFinished();
@@ -165,12 +158,13 @@ public class PeerWireClient {
 	private void checkFinished() {
 		if (pieces <= 0) {
 			try {
-				TorrentFile torrentFile = new TorrentFile(new String(ByteBufUtil.getBytes(metadata), StandardCharsets.ISO_8859_1), hexHash);
-				torrent = torrentFile.toEntity();
+				if (metadata[0] == 'd') {
+					Map map = BencodingUtils.decode(metadata);
+					if (map != null)
+						torrent = parseTorrent(map);
+				}
 			} catch (Exception e) {
-				//e.printStackTrace();
 			}
-			//Map map = BencodingUtils.decode(Arrays.copyOfRange(metadata, 0, metadata_size));
 			destroy();
 		}
 	}
@@ -226,97 +220,90 @@ public class PeerWireClient {
 	 * @param map
 	 * @return java.util.Optional<cc.dodder.common.entity.Torrent>
 	 */
-	/*private Optional<Torrent> parseTorrent(Map map) {
-		String encoding = "UTF-8";
+	private Torrent parseTorrent(Map map) throws Exception {
+		String encoding = null;
 		Map<String, Object> info;
-		Torrent torrent;
 		if (map.containsKey("info"))
 			info = (Map<String, Object>) map.get("info");
 		else
 			info = map;
 
 		if (!info.containsKey("name"))
-			return Optional.empty();
+			return null;
 		if (map.containsKey("encoding"))
 			encoding = (String) map.get("encoding");
-		*//*
-		if (map.containsKey("announce")) {
-			torrent.setAnnounce(decode_utf8(encoding, map, "announce"));
-		}
 
-		if (map.containsKey("comment")) {
-			torrent.setComment(decode_utf8(encoding, map, "comment").toString().substring(0, 300));
-		}
-
-		if (map.containsKey("created by")) {
-			torrent.setCreatedBy(decode_utf8(encoding, map, "created by"));
-		}*//*
-		torrent = new Torrent();
-		Info torrentInfo = new Info();
+		Torrent torrent = new Torrent();
 
 		if (map.containsKey("creation date"))
-			torrent.setCreationDate(new Date(((BigInteger) map.get("creation date")).longValue()));
+			torrent.setCreateDate(((BigInteger) map.get("creation date")).longValue());
 		else
-			torrent.setCreationDate(new Date());
+			torrent.setCreateDate(System.currentTimeMillis());
 
+		byte[] temp = (byte[]) map.get("name");
+		if (encoding == null) {
+			encoding = StringUtil.getEncoding(temp);
+		}
+		torrent.setFileName(new String(temp, encoding));
 
-		String name = decode_utf8(encoding, map, "name");
-		torrentInfo.setName(name.length() > 200 ? name.substring(0, 200) : name);
-
-		Set<String> types = new HashSet<>();
 		//多文件
 		if (info.containsKey("files")) {
+			Set<String> types = new HashSet<>();
+
 			List<Map<String, Object>> list = (List<Map<String, Object>>) info.get("files");
-			List<SubFile> subFiles = new ArrayList<>();
-			Long countLength = new Long(0);
+
+			long total = 0;
+			int i = 0;
+			List<Node> nodes = new ArrayList<>();
+			int cur = 1, parent = 0;
 			for (Map<String, Object> f : list) {
-				Long length = ((BigInteger) f.get("length")).longValue();
-				countLength += length;
+				long length = ((BigInteger) f.get("length")).longValue();
+				total += length;
 
-				String path = decode_utf8_2(encoding, f, "path");
-				if (path != null)
-					path = path.length() > 200 ? path.substring(0, 200) : path;
-				SubFile subFile = new SubFile(length, path);
-
-				String type = ExtensionUtil.getExtensionType(subFile.getPath());
-				if (type != null) {
-					types.add(type);
+				Long filesize = null;     //null 表示为文件夹
+				List<byte[]> aList = (List<byte[]>) f.get("path");
+				for (int j = 0; j < aList.size(); j++) {
+					String sname = new String(aList.get(j), encoding);
+					if (sname.contains("_____padding_file_"))
+						continue;
+					if (j == aList.size() - 1) {
+						filesize = length;
+						String type = ExtensionUtil.getExtensionType(sname);
+						if (type != null) {
+							types.add(type);
+						}
+					}
+					Node node = new Node(cur, j == 0 ? 0 : parent, sname, filesize, i);
+					if (!nodes.contains(node)) {
+						nodes.add(node);
+						parent = cur;
+					} else {
+						parent = nodes.get(nodes.indexOf(node)).getNid();
+					}
+					cur++;
 				}
-
-				if (subFile.getPath().indexOf("如果您看到此文件，请升级到BitComet(比特彗星)") == -1)
-					subFiles.add(subFile);
+				i++;
 			}
-			torrentInfo.setFiles(subFiles);
-			torrentInfo.setLength(countLength);
-
-			String temp = org.apache.commons.lang.StringUtils.join(types.toArray(new String[]{}), ",");
-			if (temp != null && !"".equals(temp)) {
-				torrent.setType(temp);
-			} else {
-				torrent.setType("其他");
+			Tree tree = new Tree(null);
+			tree.createTree(nodes);
+			torrent.setFileSize(total);
+			torrent.setFiles(JSON.toJSONString(tree));
+			if (types.size() <= 0)
+				types.add("其他");
+			String sType = String.join(",", types);
+			if (sType != null && !"".equals(sType)) {
+				torrent.setFileType(sType);
 			}
 		} else {
-			torrentInfo.setLength(((BigInteger) info.get("length")).longValue());
+			torrent.setFileSize(((BigInteger) info.get("length")).longValue());
 
-			String type = ExtensionUtil.getExtensionType(name);
-			torrent.setType(type == null ? "其他" :type);
+			String type = ExtensionUtil.getExtensionType(torrent.getFileName());
+			if (type != null) {
+				torrent.setFileType(type);
+			}
 		}
-		torrent.setInfo(torrentInfo);
-		return Optional.of(torrent);
-	}*/
-
-	private String decode_utf8(String encoding, Map<String, Object> map, String key) {
-		if (map.containsKey(key + ".utf-8")) {
-			return new String((byte[]) map.get(key + ".utf-8"), StandardCharsets.UTF_8);
-		}
-		return StringUtils.newStringUtf8((byte[]) map.get(key));
-	}
-
-	private String decode_utf8_2(String encoding, Map<String, Object> map, String key) {
-		if (map.containsKey(key + ".utf-8")) {
-			return new String(((List<byte[]>) map.get(key + ".utf-8")).get(0), StandardCharsets.UTF_8);
-		}
-		return StringUtils.newStringUtf8(((List<byte[]>) map.get(key )).get(0));
+		torrent.setInfoHash(hexHash);
+		return torrent;
 	}
 
 	private void resolveExtendHandShake(Map map) throws Exception {
@@ -340,11 +327,12 @@ public class PeerWireClient {
 
 	private void requestPieces() throws Exception {
 
-		metadata = Unpooled.buffer(this.metadata_size);
+		metadata = new byte[this.metadata_size];
 
 		pieces = (int) Math.ceil(this.metadata_size / (16.0 * 1024));
 
-		for (int piece = 0; piece < pieces; piece++) {
+		int temp = pieces;
+		for (int piece = 0; piece < temp; piece++) {
 			requestPiece(piece);
 		}
 	}
@@ -428,10 +416,14 @@ public class PeerWireClient {
 		} catch (Exception e) {
 		}
 		readBuff = null;
-		if (cachedBuff != null)
-			cachedBuff.clear();
-		if (metadata != null)
-			metadata.clear();
+		if (cachedBuff.get() != null) {
+			try {
+				cachedBuff.get().clear();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		metadata = null;
 	}
 
 

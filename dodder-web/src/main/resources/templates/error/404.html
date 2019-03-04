@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-cn" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/layui/css/layui.css}">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title>菟丝子资源社区</title>
+</head>
+<body>
+<div th:replace="common/header :: header"></div>
+<div class="layui-container dodder-body">
+    <pre th:replace="common/banner :: banner"></pre>
+    <div class="layui-col-md9">
+        <div class="layui-card dodder-box-shadow">
+            <div class="layui-card-header">资源列表</div>
+            <div class="layui-card-body dodder-tags layui-text">
+                分类：
+                <span class="layui-breadcrumb" lay-separator="|" th:unless="${searchRequest == null}">
+                        <a th:id="${#strings.isEmpty(searchRequest.fileType)} ? 'dodder-active' : ''"
+                           th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,)}">全部</a>
+                      <a th:id="${searchRequest.fileType == '音频'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='音频')}">音频</a>
+                        <a th:id="${searchRequest.fileType == '视频'} ? 'dodder-active' : ''"
+                           th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='视频')}">视频</a>
+                      <a th:id="${searchRequest.fileType == '图片'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='图片')}">图片</a>
+                      <a th:id="${searchRequest.fileType == '文档'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='文档')}">文档</a>
+                      <a th:id="${searchRequest.fileType == '压缩'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='压缩')}">压缩文件</a>
+                      <a th:id="${searchRequest.fileType == '镜像'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='镜像')}">镜像文件</a>
+                      <a th:id="${searchRequest.fileType == '软件'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='软件')}">软件</a>
+                    </span>
+                <span class="layui-breadcrumb" lay-separator="|" th:unless="${searchRequest != null}">
+                    <a id="dodder-active" th:href="@{/}">全部</a>
+                    <a th:href="@{/(fileType='音频')}">音频</a>
+                    <a th:href="@{/(fileType='视频')}">视频</a>
+                    <a th:href="@{/(fileType='图片')}">图片</a>
+                    <a th:href="@{/(fileType='文档')}">文档</a>
+                    <a th:href="@{/(fileType='压缩')}">压缩文件</a>
+                    <a th:href="@{/(fileType='镜像')}">镜像文件</a>
+                    <a th:href="@{/(fileType='软件')}">软件</a>
+                </span>
+            </div>
+            <pre class="dodder-search-result">
+_  _      ___    _  _
+| || |    / _ \  | || |
+| || |_  | | | | | || |_
+|__   _| | |_| | |__   _|
+|_|    \___/     |_|
+
+  页面消失在了异次元空间！
+            </pre>
+            <div id="dodder-page"></div>
+        </div>
+    </div>
+    <div class="layui-col-md3 layui-col-space15 dodder-pull-right">
+        <div th:replace="common/profile :: profile"></div>
+        <div th:replace="common/status :: status"></div>
+    </div>
+</div>
+<footer th:replace="common/footer :: footer"></footer>
+<script th:src="@{/layui/layui.all.js}"></script>
+<script th:src="@{/js/search.js}"></script>
+</body>
+</html>

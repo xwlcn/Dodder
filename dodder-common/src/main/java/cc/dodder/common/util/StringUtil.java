@@ -1,8 +1,14 @@
 package cc.dodder.common.util;
 
+import cc.dodder.common.entity.Node;
+import cc.dodder.common.entity.Torrent;
+import cc.dodder.common.entity.Tree;
+import com.alibaba.fastjson.JSON;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import java.text.DecimalFormat;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Created by Administrator on 2016/3/14.
@@ -171,6 +177,25 @@ public class StringUtil {
 			encoding = defaultEncoding;
 		}
 		return encoding;
+	}
+
+	/**
+	* 获取子文件列表
+	*
+	* @param torrent
+	* @return java.util.List<cc.dodder.common.entity.Node>
+	*/
+	public static List<Node> getFileList(Torrent torrent) {
+		if (torrent.getFiles() == null) {   //单文件
+			int pos = torrent.getFileName().lastIndexOf(".");
+			String sname = torrent.getFileName();
+			if (pos > 0)
+				torrent.setFileName(sname.substring(0, pos));
+			return Arrays.asList(new Node(1, 0, sname, torrent.getFileSize(), 1));
+		}
+
+		Tree tree = JSON.parseObject(torrent.getFiles(), Tree.class);
+		return tree.getLeafList();
 	}
 
 }

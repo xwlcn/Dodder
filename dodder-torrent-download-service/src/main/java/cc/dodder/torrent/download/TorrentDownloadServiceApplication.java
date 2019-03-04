@@ -40,10 +40,8 @@ public class TorrentDownloadServiceApplication {
 
 	private ExecutorService downloadTasks;
 
-	public static void main(String[] args) throws Exception {
+	public static void main(String[] args) {
 		SpringApplication.run(TorrentDownloadServiceApplication.class, args);
-		//PeerWireClient client = new PeerWireClient();
-		//client.downloadMetadata(new InetSocketAddress("178.166.3.249", 23139), ByteUtil.hexStringToBytes("10d40d4b047a91c813e8c6ffbfb6adf45c2df5f6"));
 	}
 
 	@StreamListener("download-message-in")
@@ -54,6 +52,8 @@ public class TorrentDownloadServiceApplication {
 
 	@Scheduled(fixedDelay = 5 * 60 * 1000)
 	public void autoFinalize() {
+		//定时强制回收 Finalizer 队列里的 Socket 对象（有个抽象父类重写了 finalize 方法，
+		//频繁创建 Socket 会导致 Socket 得不到及时回收频繁发生 FGC）
 		System.runFinalization();
 	}
 
@@ -61,7 +61,7 @@ public class TorrentDownloadServiceApplication {
 	public void init() {
 		downloadTasks = new ThreadPoolExecutor(nThreads, nThreads,
 				0L, TimeUnit.MILLISECONDS,
-				new LinkedBlockingQueue<>(nThreads + 100), new ThreadPoolExecutor.DiscardPolicy());
+				new LinkedBlockingQueue<>(nThreads + nThreads / 2), new ThreadPoolExecutor.DiscardPolicy());
 	}
 
 	@PreDestroy

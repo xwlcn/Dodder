@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="zh-cn" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="status" th:unless="${searchRequest == null}">
+    <div class="layui-card dodder-box-shadow">
+        <div class="layui-card-header">资源抓取状态</div>
+        <div class="layui-card-body dodder-resource-status">
+            <p>文件类型：<span th:text="${#strings.isEmpty(searchRequest.fileType) ? '全部' : searchRequest.fileType}" th:remove="tag"></span></p>
+            <p th:text="${'资源总数：' + result.data.total}"></p>
+            <p>稳定运行：1 天</p>
+        </div>
+    </div>
+</div>
+</html>

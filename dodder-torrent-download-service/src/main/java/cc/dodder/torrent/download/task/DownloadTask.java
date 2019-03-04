@@ -20,7 +20,7 @@ import java.net.InetSocketAddress;
  * Torrent 下载线程
  *
  * @author Mr.Xu
- * @since 2019-02-22 10:43
+ * @date 2019-02-22 10:43
  **/
 @Slf4j
 public class DownloadTask implements Runnable {
@@ -36,8 +36,9 @@ public class DownloadTask implements Runnable {
 	public void run() {
 		StoreFeignClient storeFeignClient = (StoreFeignClient) SpringContextUtil.getBean(StoreFeignClient.class);
 		Result result = storeFeignClient.existHash(ByteUtil.byteArrayToHex(msgInfo.getInfoHash()));
-		if (result.getStatus() == HttpStatus.NO_CONTENT.value())
+		if (result.getStatus() == HttpStatus.NO_CONTENT.value()) {
 			return;
+		}
 
 		PeerWireClient wireClient = new PeerWireClient();
 		//设置下载完成监听器
@@ -48,13 +49,16 @@ public class DownloadTask implements Runnable {
 				return;
 			}
 			redisTemplate.persist(msgInfo.getInfoHash());
-			log.info("[{}:{}] Download torrent success, info hash is {}", msgInfo.getIp(), msgInfo.getPort(), torrent.getInfoHash());
 			messageStreams = (MessageStreams) SpringContextUtil.getBean(MessageStreams.class);
 			//丢进 kafka 消息队列进行入库操作
 			messageStreams.torrentMessageOutput()
 					.send(MessageBuilder.withPayload(torrent)
 							.setHeader(MessageHeaders.CONTENT_TYPE, MimeTypeUtils.APPLICATION_JSON)
 							.build());
+			log.info("[{}:{}] Download torrent success, info hash is {}",
+					msgInfo.getIp(),
+					msgInfo.getPort(),
+					torrent.getInfoHash());
 		});
 		wireClient.downloadMetadata(new InetSocketAddress(msgInfo.getIp(), msgInfo.getPort()), msgInfo.getInfoHash());
 	}
