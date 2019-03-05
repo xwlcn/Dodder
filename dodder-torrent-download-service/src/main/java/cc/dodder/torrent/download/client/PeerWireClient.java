@@ -7,7 +7,7 @@ import cc.dodder.common.util.ByteUtil;
 import cc.dodder.common.util.ExtensionUtil;
 import cc.dodder.common.util.StringUtil;
 import cc.dodder.common.util.bencode.BencodingUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -29,8 +29,6 @@ import java.util.function.Consumer;
  **/
 @Slf4j
 public class PeerWireClient {
-
-	private static ObjectMapper objectMapper = new ObjectMapper();
 
 	private Map<String, Object> map;
 
@@ -289,7 +287,7 @@ public class PeerWireClient {
 			Tree tree = new Tree(null);
 			tree.createTree(nodes);
 			torrent.setFileSize(total);
-			torrent.setFiles(objectMapper.writeValueAsString(tree));
+			torrent.setFiles(JSON.toJSONString(tree));
 			if (types.size() <= 0)
 				types.add("其他");
 			String sType = String.join(",", types);

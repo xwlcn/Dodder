@@ -62,6 +62,11 @@
 
     <repositories>
         <repository>
+            <id>nuiton</id>
+            <name>Nexus nuiton</name>
+            <url>http://maven.nuiton.org/release/</url>
+        </repository>
+        <repository>
             <id>nexus-aliyun</id>
             <name>Nexus aliyun</name>
             <url>http://maven.aliyun.com/nexus/content/groups/public</url>

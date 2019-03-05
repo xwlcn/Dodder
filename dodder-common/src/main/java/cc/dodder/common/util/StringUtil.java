@@ -4,8 +4,10 @@ import cc.dodder.common.entity.Node;
 import cc.dodder.common.entity.Torrent;
 import cc.dodder.common.entity.Tree;
 import com.alibaba.fastjson.JSON;
-import org.mozilla.universalchardet.UniversalDetector;
+import info.monitorenter.cpdetector.io.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
@@ -14,6 +16,15 @@ import java.util.List;
  * Created by Administrator on 2016/3/14.
  */
 public class StringUtil {
+
+	public static CodepageDetectorProxy detector = CodepageDetectorProxy.getInstance();
+
+	static {
+		detector.add(new ParsingDetector(false));
+		detector.add(JChardetFacade.getInstance());
+		detector.add(ASCIIDetector.getInstance());
+		detector.add(UnicodeDetector.getInstance());
+	}
 
 	public static String getMiddleString(String text, String lStr, String rStr) {
 		String result = "";
@@ -168,15 +179,12 @@ public class StringUtil {
 	 */
 	public static String getEncoding(byte[] bytes) {
 		String defaultEncoding = "UTF-8";
-		UniversalDetector detector = new UniversalDetector(null);
-		detector.handleData(bytes, 0, bytes.length);
-		detector.dataEnd();
-		String encoding = detector.getDetectedCharset();
-		detector.reset();
-		if (encoding == null) {
-			encoding = defaultEncoding;
+		try(ByteArrayInputStream in = new ByteArrayInputStream(bytes)) {
+			java.nio.charset.Charset charset = detector.detectCodepage(in, 20);
+			defaultEncoding = charset.name();
+		} catch (IOException e) {
 		}
-		return encoding;
+		return defaultEncoding;
 	}
 
 	/**
