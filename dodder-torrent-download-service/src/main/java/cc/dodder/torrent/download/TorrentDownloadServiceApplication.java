@@ -2,6 +2,8 @@ package cc.dodder.torrent.download;
 
 import cc.dodder.api.StoreFeignClient;
 import cc.dodder.common.entity.DownloadMsgInfo;
+import cc.dodder.common.util.SystemClock;
+import cc.dodder.torrent.download.client.Constants;
 import cc.dodder.torrent.download.stream.MessageStreams;
 import cc.dodder.torrent.download.task.DownloadTask;
 import lombok.extern.slf4j.Slf4j;
@@ -20,9 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executors;
 
 @Slf4j
 @EnableScheduling
@@ -59,9 +59,10 @@ public class TorrentDownloadServiceApplication {
 
 	@PostConstruct
 	public void init() {
-		downloadTasks = new ThreadPoolExecutor(nThreads, nThreads,
+		/*downloadTasks = new ThreadPoolExecutor(nThreads, nThreads,
 				0L, TimeUnit.MILLISECONDS,
-				new LinkedBlockingQueue<>(nThreads + nThreads / 2), new ThreadPoolExecutor.DiscardPolicy());
+				new LinkedBlockingQueue<>(nThreads + nThreads / 2), new ThreadPoolExecutor.DiscardPolicy());*/
+		downloadTasks = Executors.newFixedThreadPool(nThreads);
 	}
 
 	@PreDestroy

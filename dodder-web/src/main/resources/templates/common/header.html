@@ -4,7 +4,7 @@
     <h3><a th:href="@{/}">菟丝子资源社区</a></h3>
     <div class="layui-container">
         <div class="dodder-search-box dodder-pull-right">
-            <input placeholder="请输入想搜索的内容" th:value="${searchRequest != null ? searchRequest.fileName : ''}" type="text" name="number"
+            <input placeholder="搜索内容" th:value="${searchRequest != null ? searchRequest.fileName : ''}" type="text" name="number"
                    autocomplete="off" class="dodder-search-input layui-input" id="keyword">
             <button class="layui-inline layui-btn layui-btn-sm layui-btn-danger dodder-search-btn" id="search-btn">搜 索</button>
         </div>

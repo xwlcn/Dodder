@@ -22,6 +22,7 @@ spring:
       kafka:
         binder:
           brokers: 127.0.0.1
+          min-partition-count: 1      #主题分区个数，集群部署时请根据需求修改，分区数 >= download service 集群数量
       bindings:
         download-message-out:
           destination: downloadMessages

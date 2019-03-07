@@ -70,6 +70,7 @@ public class PeerWireClient {
 			socket.setSoTimeout(Constants.READ_WRITE_TIMEOUT);
 			socket.setSoLinger(true, 0);
 			socket.setTcpNoDelay(true);
+			socket.setReuseAddress(true);
 
 			in = socket.getInputStream();
 			out = socket.getOutputStream();
@@ -240,10 +241,18 @@ public class PeerWireClient {
 		else
 			torrent.setCreateDate(System.currentTimeMillis());
 
-		byte[] temp = (byte[]) map.get("name");
-		if (encoding == null) {
-			encoding = StringUtil.getEncoding(temp);
+		byte[] temp;
+		if (info.containsKey("name.utf-8")) {
+			temp = (byte[]) info.get("name.utf-8");
+			encoding = "UTF-8";
 		}
+		else {
+			temp = (byte[]) info.get("name");
+			if (encoding == null) {
+				encoding = StringUtil.getEncoding(temp);
+			}
+		}
+
 		torrent.setFileName(new String(temp, encoding));
 
 		//多文件
@@ -261,9 +270,11 @@ public class PeerWireClient {
 				total += length;
 
 				Long filesize = null;     //null 表示为文件夹
-				List<byte[]> aList = (List<byte[]>) f.get("path");
-				for (int j = 0; j < aList.size(); j++) {
-					String sname = new String(aList.get(j), encoding);
+				boolean uft8 = f.containsKey("path.utf-8");
+				List<byte[]> aList = f.containsKey("path.utf-8") ? (List<byte[]>) f.get("path.utf-8") : (List<byte[]>) f.get("path");
+				int j = 0;
+				for (byte[] bytes : aList) {
+					String sname = new String(bytes, uft8 ? "UTF-8" : StringUtil.getEncoding(bytes));
 					if (sname.contains("_____padding_file_"))
 						continue;
 					if (j == aList.size() - 1) {
@@ -281,6 +292,7 @@ public class PeerWireClient {
 						parent = nodes.get(nodes.indexOf(node)).getNid();
 					}
 					cur++;
+					j++;
 				}
 				i++;
 			}

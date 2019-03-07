@@ -4,14 +4,16 @@ import cc.dodder.api.StoreFeignClient;
 import cc.dodder.common.entity.DownloadMsgInfo;
 import cc.dodder.common.entity.Result;
 import cc.dodder.common.util.ByteUtil;
+import cc.dodder.common.util.SystemClock;
+import cc.dodder.torrent.download.client.Constants;
 import cc.dodder.torrent.download.client.PeerWireClient;
 import cc.dodder.torrent.download.stream.MessageStreams;
 import cc.dodder.torrent.download.util.SpringContextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.MessageHeaders;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.util.MimeTypeUtils;
 
 import java.net.InetSocketAddress;
@@ -34,21 +36,29 @@ public class DownloadTask implements Runnable {
 
 	@Override
 	public void run() {
+		/*byte[] rightByte = new byte[10];
+		System.arraycopy(msgInfo.getInfoHash(), 10, rightByte,0, 10);
+		byte[] key = Arrays.concatenate(msgInfo.getIp().getBytes(), rightByte);*/
+		RedisTemplate redisTemplate = (RedisTemplate) SpringContextUtil.getBean("redisTemplate");
+		//由于下载线程消费的速度总是比 dht server 生产的速度慢，所以要做一下时间限制，否则程序越跑越慢
+		if (SystemClock.now() - msgInfo.getTimestamp() >= Constants.MAX_LOSS_TIME) {
+			return;
+		}
+
 		StoreFeignClient storeFeignClient = (StoreFeignClient) SpringContextUtil.getBean(StoreFeignClient.class);
 		Result result = storeFeignClient.existHash(ByteUtil.byteArrayToHex(msgInfo.getInfoHash()));
 		if (result.getStatus() == HttpStatus.NO_CONTENT.value()) {
+			redisTemplate.opsForValue().set(msgInfo.getInfoHash(), new byte[0]);
 			return;
 		}
 
 		PeerWireClient wireClient = new PeerWireClient();
 		//设置下载完成监听器
 		wireClient.setOnFinishedListener((torrent) -> {
-			RedisTemplate redisTemplate = (RedisTemplate) SpringContextUtil.getBean("redisTemplate");
 			if (torrent == null) {  //下载失败
-				redisTemplate.delete(msgInfo.getInfoHash());
 				return;
 			}
-			redisTemplate.persist(msgInfo.getInfoHash());
+			redisTemplate.opsForValue().set(msgInfo.getInfoHash(), new byte[0]);
 			messageStreams = (MessageStreams) SpringContextUtil.getBean(MessageStreams.class);
 			//丢进 kafka 消息队列进行入库操作
 			messageStreams.torrentMessageOutput()

@@ -1,5 +1,6 @@
 package cc.dodder.common.entity;
 
+import cc.dodder.common.util.SystemClock;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -16,10 +17,12 @@ public class DownloadMsgInfo implements Serializable {
 	private String ip;
 	private int port;
 	private byte[] infoHash;
+	private long timestamp;
 
 	public DownloadMsgInfo(String ip, int port, byte[] infoHash) {
 		this.ip = ip;
 		this.port = port;
 		this.infoHash = infoHash;
+		timestamp = SystemClock.now();
 	}
 }

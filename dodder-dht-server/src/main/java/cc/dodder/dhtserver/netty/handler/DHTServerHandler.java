@@ -14,6 +14,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.util.Arrays;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.MessageHeaders;
@@ -184,10 +185,16 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		dhtServer.sendKRPC(packet);
 		// 将 info_hash 放进消息队列
 		if (token.length == 2 && info_hash[0] == token[0] && info_hash[1] == token[1]) {    //check token
+			/*byte[] rightByte = new byte[10];
+			System.arraycopy(info_hash, 10, rightByte,0, 10);
+			byte[] key = Arrays.concatenate(sender.getHostString().getBytes(), rightByte);*/
 			//使用 redis 将消息队列去重
-			if (redisTemplate.opsForValue().getAndSet(info_hash, new byte[0]) != null)
+			if (redisTemplate.hasKey(info_hash))
 				return;
-			redisTemplate.expire(info_hash, 5, TimeUnit.MINUTES);
+			/*if (redisTemplate.hasKey(info_hash) || redisTemplate.opsForValue().getAndSet(key, new byte[0]) != null) {
+				return;
+			}
+			redisTemplate.expire(key, 5, TimeUnit.MINUTES);*/
 			log.error("info_hash[AnnouncePeer] : {}:{} - {}", sender.getHostString(), port, ByteUtil.byteArrayToHex(info_hash));
 			messageStreams.downloadMessageOutput()
 					.send(MessageBuilder

@@ -10,6 +10,10 @@ input::-webkit-input-placeholder {color: #eee;}
     float: right;
 }
 
+.dodder-clear {
+    clear: both;
+}
+
 .dodder-fly-header {
     position: fixed;
     z-index: 10000;
@@ -129,6 +133,49 @@ input::-webkit-input-placeholder {color: #eee;}
     padding-left: 20px;
 }
 
+.dodder-return-btn {
+    font-weight: bold;
+    margin-left: -15px;
+    border: none;
+    border-right: 1px solid #c9c9c9;
+    display: inline-block;
+    background: #fff;
+    height: 44px;
+    line-height: 44px;
+    padding: 0 18px;
+    color: #666;
+    white-space: nowrap;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.dodder-return-btn:hover {
+    background: #eee;
+    transition: all;
+    transition-duration: .5s;
+}
+
+.dodder-torrent-header {
+    list-style: none;
+    padding: 5px 15px;
+    margin: -10px -15px;
+    margin-bottom: 5px!important;
+    background: #ccc;
+    overflow: hidden;
+    color: #666;
+}
+
+.dodder-torrent-header li {
+    margin-right: 15px;
+    float: left;
+}
+
+.dodder-torrent-header a:hover {
+    color: #fff!important;
+    text-decoration-line: underline;
+}
+
 .dodder-torrent-info {
     margin: 15px 0;
     font-family: Verdana, helvetica, arial, sans-serif;
@@ -180,9 +227,6 @@ footer {
 .layui-table tr td:nth-child(2) div:first-child {
     width: 80%;
     float: left;
-    /*white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;*/
 }
 
 .layui-table tr td:nth-child(2) div:nth-child(2) {

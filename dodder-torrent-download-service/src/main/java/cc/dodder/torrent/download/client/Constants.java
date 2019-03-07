@@ -2,7 +2,7 @@ package cc.dodder.torrent.download.client;
 
 import cc.dodder.common.util.NodeIdUtil;
 
-class Constants {
+public class Constants {
 
 	public static final String BT_PROTOCOL = "BitTorrent protocol";
 	public static final byte[] BT_RESERVED = new byte[] {
@@ -19,5 +19,7 @@ class Constants {
 	public static final int MAX_METADATA_SIZE = 1024 * 1024 * 5;        //最大 1M
 
 	public static final byte[] PEER_ID = NodeIdUtil.createRandomNodeId();
+
+	public static final long MAX_LOSS_TIME = 3 * 60 * 1000;
 
 }

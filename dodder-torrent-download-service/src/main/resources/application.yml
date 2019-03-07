@@ -17,6 +17,7 @@ spring:
       kafka:
         binder:
           brokers: 127.0.0.1
+          min-partition-count: 1
       bindings:
         download-message-in:
           group: torrent-download-group
@@ -43,4 +44,4 @@ management:
 
 download:
   num:
-    thread: 300
+    thread: 1000

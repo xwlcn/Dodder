@@ -18,12 +18,21 @@
     <div class="layui-row layui-col-space15">
         <div class="layui-col-md9">
             <div class="layui-card dodder-box-shadow">
-                <div class="layui-card-header dodder-nowrap">
-                    <button class="layui-btn layui-btn-xs" onclick="javascript :history.back(-1);">返回</button>
+                <div class="layui-card-header dodder-nowrap" style="border-bottom: none">
+                    <button class="dodder-return-btn layui-icon layui-icon-return" onclick="javascript :history.back(-1);"></button>
                     &nbsp;<b th:text="${torrent.fileName}" th:title="${torrent.fileName}"></b>
                 </div>
                 <div class="layui-card-body">
-                    <p class="layui-icon layui-icon-link dodder-magnet-link"> 下载链接：<a
+                    <ul class="dodder-torrent-header">
+                        <li>发现时间：[[${#calendars.format(torrent.createDate,'yyyy年MM月dd日 HH时mm分ss秒')}]]</li>
+                        <li>文件大小：[[${#dodderUtil.formatSize(torrent.fileSize)}]]</li>
+                        <li class="dodder-tag-list">文件类型：
+                            <ul th:each="type : ${#strings.arraySplit(torrent.fileType,',')}" th:remove="tag">
+                                <a class="layui-badge" th:href="@{/(fileType=${type})}" th:text="${type}"></a>
+                            </ul>
+                        </li>
+                    </ul>
+                    <p class="layui-icon layui-icon-link dodder-magnet-link dodder-clear"> 下载链接：<a
                             th:href="${'magnet:?xt=urn:btih:' + torrent.infoHash}"
                             th:text="${'magnet:?xt=urn:btih:' + torrent.infoHash}"></a></p>
                     <hr class="layui-bg-red">

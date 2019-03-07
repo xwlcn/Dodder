@@ -180,7 +180,7 @@ public class StringUtil {
 	public static String getEncoding(byte[] bytes) {
 		String defaultEncoding = "UTF-8";
 		try(ByteArrayInputStream in = new ByteArrayInputStream(bytes)) {
-			java.nio.charset.Charset charset = detector.detectCodepage(in, 20);
+			java.nio.charset.Charset charset = detector.detectCodepage(in, bytes.length);
 			defaultEncoding = charset.name();
 		} catch (IOException e) {
 		}

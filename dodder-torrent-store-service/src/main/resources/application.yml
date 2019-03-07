@@ -13,6 +13,7 @@ spring:
           brokers: 127.0.0.1
       bindings:
         torrent-message-in:
+          group: torrent-store-group
           destination: torrentMessages
           contentType: application/json
           consumer:

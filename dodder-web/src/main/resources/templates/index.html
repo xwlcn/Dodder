@@ -30,10 +30,10 @@
                          th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='图片')}">图片</a>
                       <a th:id="${searchRequest.fileType == '文档'} ? 'dodder-active' : ''"
                          th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='文档')}">文档</a>
-                      <a th:id="${searchRequest.fileType == '压缩'} ? 'dodder-active' : ''"
-                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='压缩')}">压缩文件</a>
-                      <a th:id="${searchRequest.fileType == '镜像'} ? 'dodder-active' : ''"
-                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='镜像')}">镜像文件</a>
+                      <a th:id="${searchRequest.fileType == '压缩文件'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='压缩文件')}">压缩文件</a>
+                      <a th:id="${searchRequest.fileType == '镜像文件'} ? 'dodder-active' : ''"
+                         th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='镜像文件')}">镜像文件</a>
                       <a th:id="${searchRequest.fileType == '软件'} ? 'dodder-active' : ''"
                          th:href="@{/(__(${!#strings.isEmpty(searchRequest.fileName)}) ? 'fileName=*{searchRequest.fileName}' : ''__,fileType='软件')}">软件</a>
                     </span>
