@@ -8,11 +8,11 @@ _  /_/ // /_/ / /_/ / / /_/ / /  __/  /
 -------
 # 快速开始
 #### 环境依赖
-- Nacos ([http://nacos.io](http://nacos.io))
-- Zookeeper ([http://zookeeper.apache.org/](http://zookeeper.apache.org/))
-- Kafka ([http://kafka.apache.org/](http://kafka.apache.org/))
-- Elasticsearch ([https://www.elastic.co/](https://www.elastic.co/))
-
+- Nacos-0.8.0 ([http://nacos.io](http://nacos.io))
+- Zookeeper-3.4.12 ([http://zookeeper.apache.org/](http://zookeeper.apache.org/))
+- Kafka-2.11-2.1.0 ([http://kafka.apache.org/](http://kafka.apache.org/))
+- Elasticsearch-6.6.0 ([https://www.elastic.co/](https://www.elastic.co/))
+- elasticsearch-analysis-ik-6.6.0 ([https://github.com/medcl/elasticsearch-analysis-ik](https://github.com/medcl/elasticsearch-analysis-ik))
 #### 演示地址
 [https://dodder.cc](https://dodder.cc)
 
