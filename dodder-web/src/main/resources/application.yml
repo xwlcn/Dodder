@@ -1,12 +1,12 @@
 server:
-  port: 80
+  port: 666
 spring:
   application:
     name: web
   cloud:
     nacos:
       discovery:
-        server-addr: 127.0.0.1:8848
+        server-addr: 193.164.131.233:8848
   thymeleaf:
     cache: false
     mode: LEGACYHTML5

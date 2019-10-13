@@ -8,11 +8,13 @@ _  /_/ // /_/ / /_/ / / /_/ / /  __/  /
 -------
 # 快速开始
 #### 环境依赖
-- Nacos-0.8.0 ([http://nacos.io](http://nacos.io))
-- Zookeeper-3.4.12 ([http://zookeeper.apache.org/](http://zookeeper.apache.org/))
-- Kafka-2.11-2.1.0 ([http://kafka.apache.org/](http://kafka.apache.org/))
-- Elasticsearch-6.6.0 ([https://www.elastic.co/](https://www.elastic.co/))
-- elasticsearch-analysis-ik-6.6.0 ([https://github.com/medcl/elasticsearch-analysis-ik](https://github.com/medcl/elasticsearch-analysis-ik))
+- Nacos-1.1.3 ([http://nacos.io](http://nacos.io))
+- Zookeeper-3.5.5 ([http://zookeeper.apache.org/](http://zookeeper.apache.org/))
+- Kafka-2.12-2.3.0 ([http://kafka.apache.org/](http://kafka.apache.org/))
+- Redis-2.6 ([https://redis.io/](https://redis.io/))
+- MongoDB-3.6.8 ([https://www.mongodb.com/](https://www.mongodb.com/))
+- Elasticsearch-7.3.2 ([https://www.elastic.co/](https://www.elastic.co/))
+- elasticsearch-analysis-ik-7.3.2 ([https://github.com/medcl/elasticsearch-analysis-ik](https://github.com/medcl/elasticsearch-analysis-ik))
 #### 演示地址
 [https://dodder.cc](https://dodder.cc)
 
@@ -21,6 +23,17 @@ _  /_/ // /_/ / /_/ / / /_/ / /  __/  /
 * RAM:	32GB - DDR3
 * Hard Drive(s):	2x 1TB (HDD SATA)
 * Bandwidth:	Unmetered @ 1Gbps
+
+#### 更新日志
+* 2019-10-13
+  - 数据存储到 MongoDB，Elasticsearch 只做索引
+  - 升级各个环境依赖的版本
+  - 优化数据存储服务，将 Kafka Torrent 的入库和索引消息改为手动提交模式，防止数据丢失
+  - 进行两台服务器分布式部署测试，目前成功部署运行中：
+     1. A 服务器部署微服务：dht-server、store-service （服务器有限，所以所有环境依赖比如 Elasticsearch 全在这台机器上）
+     2. B 服务器部署微服务：dht-server、download-service、dodder-web
+* 2019-04-17
+  - 初始版本
 
 #### 整体架构
 ![架构图](https://github.com/xwlcn/Dodder/raw/master/20190305.jpg)

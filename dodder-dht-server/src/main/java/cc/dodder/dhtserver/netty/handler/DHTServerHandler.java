@@ -29,6 +29,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /***
@@ -50,6 +52,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	@Autowired
 	private MessageStreams messageStreams;
 
+	private ExecutorService pool = Executors.newCachedThreadPool();
 
 
 	public static final UniqueBlockingQueue NODES_QUEUE = new UniqueBlockingQueue();
@@ -60,18 +63,21 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		byte[] buff = new byte[packet.content().readableBytes()];
 		packet.content().readBytes(buff);
 
-		Map<String, ?> map = BencodingUtils.decode(buff);
+		pool.execute(() -> {
 
-		if (map == null || map.get("y") == null)
-			return;
+			Map<String, ?> map = BencodingUtils.decode(buff);
 
-		String y = new String((byte[]) map.get("y"));
+			if (map == null || map.get("y") == null)
+				return;
 
-		if ("q".equals(y)) {            //请求 Queries
-			onQuery(map, packet.sender());
-		} else if ("r".equals(y)) {     //回复 Responses
-			onResponse(map, packet.sender());
-		}
+			String y = new String((byte[]) map.get("y"));
+
+			if ("q".equals(y)) {            //请求 Queries
+				onQuery(map, packet.sender());
+			} else if ("r".equals(y)) {     //回复 Responses
+				onResponse(map, packet.sender());
+			}
+		});
 
 	}
 
@@ -339,4 +345,5 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	public void stop() {
 		findNodeTask.interrupt();
 	}
+
 }

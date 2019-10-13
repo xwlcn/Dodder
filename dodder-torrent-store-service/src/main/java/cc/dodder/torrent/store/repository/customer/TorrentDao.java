@@ -16,12 +16,20 @@ import java.io.IOException;
 public interface TorrentDao {
 
 	/**
+	 * Elasticsearch 创建索引
+	 *
+	 * @param torrent
+	 * @return void
+	 */
+	void index(Torrent torrent) throws IOException;
+
+	/**
 	* 存在则更新，不存在则插入
 	*
 	* @param torrent
 	* @return void
 	*/
-	void upsert(Torrent torrent) throws IOException;
+	void upsert(Torrent torrent);
 
 	/**
 	* 分页搜索
@@ -30,4 +38,14 @@ public interface TorrentDao {
 	* @return org.springframework.data.domain.Page<cc.dodder.common.entity.Torrent>
 	*/
 	Page<Torrent> query(SearchRequest request, Pageable pageable);
+
+	/**
+	 * 相关推荐搜索
+	 *
+	 * @param torrent
+	 * @param fields
+	 * @param pageable
+	 * @return org.springframework.data.domain.Page<cc.dodder.common.entity.Torrent>
+	 */
+	Page<Torrent> searchSimilar(Torrent torrent, String[] fields, Pageable pageable);
 }

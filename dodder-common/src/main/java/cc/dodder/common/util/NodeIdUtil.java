@@ -1,5 +1,8 @@
 package cc.dodder.common.util;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Date;
 import java.util.Random;
 
 /***
@@ -10,11 +13,34 @@ import java.util.Random;
  **/
 public class NodeIdUtil {
 
+	private static MessageDigest messageDigest;
+	private static Random random;
+	final static char[] digits = {
+			'0' , '1' , '2' , '3' , '4' , '5' ,
+			'6' , '7' , '8' , '9' , 'a' , 'b' ,
+			'c' , 'd' , 'e' , 'f' , 'g' , 'h' ,
+			'i' , 'j' , 'k' , 'l' , 'm' , 'n' ,
+			'o' , 'p' , 'q' , 'r' , 's' , 't' ,
+			'u' , 'v' , 'w' , 'x' , 'y' , 'z'
+	};
+	static
+	{
+		try {
+			messageDigest = MessageDigest.getInstance("SHA-1");
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		random = new Random(new Date().getTime());
+	}
+
 	public static byte[] createRandomNodeId() {
-		Random random = new Random();
-		byte[] r = new byte[20];
-		random.nextBytes(r);
-		return r;
+		byte[] bytes = new byte[20];
+		for (int i = 0; i < bytes.length; i++)
+		{
+			bytes[i] = (byte)random.nextInt(256);
+		}
+		messageDigest.update(bytes);
+		return messageDigest.digest();
 	}
 
 	public static byte[] getNeighbor(byte[] nodeId, byte[] info_hash) {

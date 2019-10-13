@@ -21,7 +21,11 @@ public class TorrentService {
 		return torrentRepository.existsById(infoHash);
 	}
 
-	public void upsert(Torrent torrent) throws IOException {
+	public void index(Torrent torrent) throws IOException {
+		torrentRepository.index(torrent);
+	}
+
+	public void upsert(Torrent torrent) {
 		torrentRepository.upsert(torrent);
 	}
 

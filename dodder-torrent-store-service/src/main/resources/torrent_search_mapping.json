@@ -7,36 +7,15 @@
       "fileName": {
         "type": "text",
         "analyzer": "ik_max_word",
-        "search_analyzer": "ik_smart",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
-          }
-        }
+        "search_analyzer": "ik_smart"
       },
       "fileSize": {
         "type": "long"
       },
       "fileType": {
         "type": "text",
-        "analyzer": "ik_smart",
-        "search_analyzer": "ik_smart",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
-          }
-        }
-      },
-      "files": {
-        "type": "text",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "ignore_above": 256
-          }
-        }
+        "analyzer": "comma",
+        "search_analyzer": "comma"
       }
     }
   }

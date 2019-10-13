@@ -4,23 +4,30 @@ import cc.dodder.common.entity.Torrent;
 import cc.dodder.common.request.SearchRequest;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.lucene.queryparser.xml.builders.FuzzyLikeThisQueryBuilder;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.core.DefaultResultMapper;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
 import org.springframework.data.elasticsearch.core.SearchResultMapper;
 import org.springframework.data.elasticsearch.core.aggregation.AggregatedPage;
 import org.springframework.data.elasticsearch.core.aggregation.impl.AggregatedPageImpl;
+import org.springframework.data.elasticsearch.core.query.MoreLikeThisQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,6 +36,7 @@ import java.util.List;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import static org.elasticsearch.search.sort.SortBuilders.fieldSort;
 import static org.elasticsearch.search.sort.SortOrder.ASC;
 import static org.elasticsearch.search.sort.SortOrder.DESC;
@@ -42,28 +50,43 @@ import static org.elasticsearch.search.sort.SortOrder.DESC;
 public class TorrentDaoImpl implements TorrentDao {
 
 	@Autowired
-	private ElasticsearchTemplate template;
+	private ElasticsearchOperations elasticsearchOperations;
+	@Autowired
+	private ElasticsearchTemplate elasticsearchTemplate;
+	@Autowired
+	private MongoTemplate mongoTemplate;
 
-	@Override
-	public void upsert(Torrent torrent) throws IOException {
-		Client client = template.getClient();
+    @Override
+    public void index(Torrent torrent) throws IOException {
+        Client client = elasticsearchTemplate.getClient();
+        XContentBuilder source = jsonBuilder()
+                .startObject()
+                .field("fileName", torrent.getFileName())
+                .field("fileType", torrent.getFileType())
+                .field("fileSize", torrent.getFileSize())
+                .field("createDate", torrent.getCreateDate())
+                .endObject();
 
-		XContentBuilder source = jsonBuilder()
-				.startObject()
-				.field("fileName", torrent.getFileName())
-				.field("fileType", torrent.getFileType())
-				.field("fileSize", torrent.getFileSize())
-				.field("createDate", torrent.getCreateDate())
-				.field("files", torrent.getFiles())
-				.endObject();
+        IndexRequest indexRequest = new IndexRequest("dodder", "torrent", torrent.getInfoHash())
+                .source(source);
+        UpdateRequest updateRequest = new UpdateRequest("dodder", "torrent", torrent.getInfoHash())
+                .doc(source)
+                .upsert(indexRequest);
+        client.update(updateRequest);
+    }
 
-		IndexRequest indexRequest = new IndexRequest("dodder", "torrent", torrent.getInfoHash())
-				.source(source);
-		UpdateRequest updateRequest = new UpdateRequest("dodder", "torrent", torrent.getInfoHash())
-				.doc(source)
-				.upsert(indexRequest);
-		client.update(updateRequest);
+    @Override
+	public void upsert(Torrent torrent) {
+		Query query = Query.query(Criteria.where("infoHash").is(torrent.getInfoHash()));
+		Update update = new Update().addToSet("createDate", torrent.getCreateDate())
+				.addToSet("fileName", torrent.getFileName())
+				.addToSet("files", torrent.getFiles())
+				.addToSet("fileSize", torrent.getFileSize())
+				.addToSet("fileType", torrent.getFileType());
+		mongoTemplate.upsert(query, update, Torrent.class);
 	}
+
+
 
 	@Override
 	public Page<Torrent> query(SearchRequest request, Pageable pageable) {
@@ -90,7 +113,7 @@ public class TorrentDaoImpl implements TorrentDao {
 		query.withPageable(pageable)
 				.withQuery(boolQuery)
 				.withHighlightFields(new HighlightBuilder.Field("fileName"));
-		Page<Torrent> page = template.queryForPage(query.build(), Torrent.class, new SearchResultMapper() {
+		Page<Torrent> page = elasticsearchTemplate.queryForPage(query.build(), Torrent.class, new DefaultResultMapper() {
 
 			@Override
 			public <T> AggregatedPage<T> mapResults(SearchResponse response, Class<T> clazz, Pageable pageable) {
@@ -114,9 +137,21 @@ public class TorrentDaoImpl implements TorrentDao {
 				return new AggregatedPageImpl<>((List<T>) results, pageable, totalHits, response.getAggregations(), response.getScrollId(),
 							maxScore);
 			}
+
 		});
 		return page;
 	}
+
+    @Override
+    public Page<Torrent> searchSimilar(Torrent torrent, String[] fields, Pageable pageable) {
+		MoreLikeThisQuery query = new MoreLikeThisQuery();
+		query.setId(torrent.getInfoHash());
+		query.setPageable(pageable);
+		if (fields != null) {
+			query.addFields(fields);
+		}
+		return elasticsearchOperations.moreLikeThis(query, Torrent.class);
+    }
 
 
 }

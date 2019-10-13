@@ -55,6 +55,7 @@ public class DownloadTask implements Runnable {
 		PeerWireClient wireClient = new PeerWireClient();
 		//设置下载完成监听器
 		wireClient.setOnFinishedListener((torrent) -> {
+
 			if (torrent == null) {  //下载失败
 				return;
 			}
@@ -62,6 +63,11 @@ public class DownloadTask implements Runnable {
 			messageStreams = (MessageStreams) SpringContextUtil.getBean(MessageStreams.class);
 			//丢进 kafka 消息队列进行入库操作
 			messageStreams.torrentMessageOutput()
+					.send(MessageBuilder.withPayload(torrent)
+							.setHeader(MessageHeaders.CONTENT_TYPE, MimeTypeUtils.APPLICATION_JSON)
+							.build());
+			//丢进 kafka 消息队列进行索引操作
+			messageStreams.indexMessageOutput()
 					.send(MessageBuilder.withPayload(torrent)
 							.setHeader(MessageHeaders.CONTENT_TYPE, MimeTypeUtils.APPLICATION_JSON)
 							.build());

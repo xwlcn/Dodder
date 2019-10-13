@@ -11,4 +11,7 @@ public interface MessageStreams {
 
 	@Output("torrent-message-out")
 	MessageChannel torrentMessageOutput();
+
+	@Output("index-message-out")
+	MessageChannel indexMessageOutput();
 }
