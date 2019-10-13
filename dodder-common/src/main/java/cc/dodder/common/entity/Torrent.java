@@ -7,27 +7,26 @@ import lombok.Setter;
 import lombok.ToString;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.Mapping;
+import org.springframework.data.elasticsearch.annotations.Setting;
 
 import java.io.Serializable;
 
 @Getter @Setter @Builder @ToString
 @Document(indexName = "dodder", type = "torrent")
 @Mapping(mappingPath = "torrent_search_mapping.json")
+@Setting(settingPath = "elasticsearch_custom_comma_analyzer.json")
 public class Torrent implements Serializable {
 
     @Id
     private String infoHash;
-    @Field(searchAnalyzer = "ik_smart",analyzer = "ik_smart")
     private String fileType = "其他";
-    @Field(searchAnalyzer = "ik_smart",analyzer = "ik_smart")
     private String fileName;
-    @Field(index = false)
+
     private long fileSize;
-    @Field
+
     private long createDate;
-    @Field(index = false)
+
     private String files;
 
     public Torrent() {

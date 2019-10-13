@@ -6,4 +6,7 @@ import org.springframework.messaging.MessageChannel;
 public interface MessageStreams {
 	@Input("torrent-message-in")
 	MessageChannel torrentMessageInput();
+
+	@Input("index-message-in")
+	MessageChannel indexMessageInput();
 }

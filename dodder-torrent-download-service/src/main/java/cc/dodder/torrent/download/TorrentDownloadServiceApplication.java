@@ -15,6 +15,9 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.StreamListener;
+import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.Message;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,8 +38,6 @@ public class TorrentDownloadServiceApplication {
 
 	@Value("${download.num.thread}")
 	private int nThreads;
-	@Autowired
-	private StoreFeignClient storeFeignClient;
 
 	private ExecutorService downloadTasks;
 

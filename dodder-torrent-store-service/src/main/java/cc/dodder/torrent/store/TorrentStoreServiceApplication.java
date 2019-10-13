@@ -10,6 +10,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.StreamListener;
+import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.Message;
 
 @Slf4j
 @EnableBinding(MessageStreams.class)
@@ -25,12 +28,34 @@ public class TorrentStoreServiceApplication {
 	}
 
 	@StreamListener("torrent-message-in")
-	public void handleTorrent(Torrent torrent) {
+	public void handleTorrent(Message<Torrent> message) {
 		try {
-			log.debug("Save torrent to elasticsearch, info hash is {}", torrent.getInfoHash());
+			Acknowledgment acknowledgment = message.getHeaders().get(KafkaHeaders.ACKNOWLEDGMENT, Acknowledgment.class);
+			Torrent torrent = message.getPayload();
+			log.debug("Save torrent to MongoDB, info hash is {}", torrent.getInfoHash());
 			torrentService.upsert(torrent);
+			//no error, execute acknowledge
+			if (acknowledgment != null) {
+				acknowledgment.acknowledge();
+			}
 		} catch (Exception e) {
 			log.error("Insert or update torrent error: {}", e);
+		}
+	}
+
+	@StreamListener("index-message-in")
+	public void indexTorrent(Message<Torrent> message) {
+		try {
+			Acknowledgment acknowledgment = message.getHeaders().get(KafkaHeaders.ACKNOWLEDGMENT, Acknowledgment.class);
+			Torrent torrent = message.getPayload();
+			log.debug("Index torrent to elasticsearch, info hash is {}", torrent.getInfoHash());
+			torrentService.index(torrent);
+			//no error, execute acknowledge
+			if (acknowledgment != null) {
+				acknowledgment.acknowledge();
+			}
+		} catch (Exception e) {
+			log.error("Index torrent error: {}", e);
 		}
 	}
 

@@ -41,7 +41,7 @@ public class IndexController {
 			return "error/404";
 		Tree tree;
 		Torrent torrent = result.getData().getTorrent();
-		if (torrent.getFiles() == null) {   //单文件
+		if ("".equals(torrent.getFiles()) || torrent.getFiles() == null || "null".equals(torrent.getFiles())) {   //单文件
 			int pos = torrent.getFileName().lastIndexOf(".");
 			String name = pos > 0 ? torrent.getFileName().substring(0, pos) : torrent.getFileName();
 			tree = new Tree(name);
