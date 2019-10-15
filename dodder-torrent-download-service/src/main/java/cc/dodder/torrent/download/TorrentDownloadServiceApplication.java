@@ -47,6 +47,15 @@ public class TorrentDownloadServiceApplication {
 
 	@StreamListener("download-message-in")
 	public void handleMessage(DownloadMsgInfo msgInfo) {
+		long now = SystemClock.now();
+		//延迟3分钟下载
+		if (now - msgInfo.getTimestamp() < 3 * 60 * 1000) {
+			try {
+				Thread.sleep(3 * 60 * 1000 - (now - msgInfo.getTimestamp()));
+			} catch (InterruptedException e) {
+			}
+		}
+
 		//丢进线程池进行下载
 		downloadTasks.execute(new DownloadTask(msgInfo));
 	}

@@ -44,12 +44,12 @@
                             <div class="layui-timeline-content">
                                 <a th:href="@{/info/__${t.infoHash}__}" class="layui-timeline-title dodder-green"
                                    th:text="${t.fileName}"></a>
-                                <p class="layui-text" style="word-break:break-all;">
+                                <!--<p class="layui-text" style="word-break:break-all;">
                                     <span th:each="node : ${#dodderUtil.getFileList(t)}" th:remove="tag">
                                         <span class="layui-badge-dot layui-bg-cyan"></span> <span
                                             th:text="${node.filename}" th:remove="tag"></span><br>
                                     </span>
-                                </p>
+                                </p>-->
                             </div>
                         </li>
                     </ul>

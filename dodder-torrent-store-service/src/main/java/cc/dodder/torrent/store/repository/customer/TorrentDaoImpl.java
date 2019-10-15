@@ -4,7 +4,6 @@ import cc.dodder.common.entity.Torrent;
 import cc.dodder.common.request.SearchRequest;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.lucene.queryparser.xml.builders.FuzzyLikeThisQueryBuilder;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
@@ -17,9 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.DefaultResultMapper;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
-import org.springframework.data.elasticsearch.core.SearchResultMapper;
+import org.springframework.data.elasticsearch.core.ResultsMapper;
 import org.springframework.data.elasticsearch.core.aggregation.AggregatedPage;
 import org.springframework.data.elasticsearch.core.aggregation.impl.AggregatedPageImpl;
 import org.springframework.data.elasticsearch.core.query.MoreLikeThisQuery;
@@ -34,9 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
-import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
-import static org.elasticsearch.index.query.QueryBuilders.termQuery;
+import static org.elasticsearch.index.query.QueryBuilders.*;
 import static org.elasticsearch.search.sort.SortBuilders.fieldSort;
 import static org.elasticsearch.search.sort.SortOrder.ASC;
 import static org.elasticsearch.search.sort.SortOrder.DESC;
@@ -49,8 +45,6 @@ import static org.elasticsearch.search.sort.SortOrder.DESC;
  **/
 public class TorrentDaoImpl implements TorrentDao {
 
-	@Autowired
-	private ElasticsearchOperations elasticsearchOperations;
 	@Autowired
 	private ElasticsearchTemplate elasticsearchTemplate;
 	@Autowired
@@ -113,32 +107,7 @@ public class TorrentDaoImpl implements TorrentDao {
 		query.withPageable(pageable)
 				.withQuery(boolQuery)
 				.withHighlightFields(new HighlightBuilder.Field("fileName"));
-		Page<Torrent> page = elasticsearchTemplate.queryForPage(query.build(), Torrent.class, new DefaultResultMapper() {
-
-			@Override
-			public <T> AggregatedPage<T> mapResults(SearchResponse response, Class<T> clazz, Pageable pageable) {
-
-				long totalHits = response.getHits().getTotalHits();
-				float maxScore = response.getHits().getMaxScore();
-
-				List<Torrent> results = new ArrayList<>();
-				for (SearchHit hit : response.getHits().getHits()) {
-					if (hit == null)
-						continue;
-					Torrent result;
-					result = JSON.parseObject(hit.getSourceAsString(), Torrent.class);
-					result.setInfoHash(hit.getId());
-					if (hit.getHighlightFields().containsKey("fileName"))
-						result.setFileName(hit.getHighlightFields().get("fileName").fragments()[0].toString());
-					else
-						result.setFileName((String) hit.getSourceAsMap().get("fileName"));
-					results.add(result);
-				}
-				return new AggregatedPageImpl<>((List<T>) results, pageable, totalHits, response.getAggregations(), response.getScrollId(),
-							maxScore);
-			}
-
-		});
+		Page<Torrent> page = elasticsearchTemplate.queryForPage(query.build(), Torrent.class, highlightResultMapper);
 		return page;
 	}
 
@@ -147,11 +116,39 @@ public class TorrentDaoImpl implements TorrentDao {
 		MoreLikeThisQuery query = new MoreLikeThisQuery();
 		query.setId(torrent.getInfoHash());
 		query.setPageable(pageable);
+		query.setMinTermFreq(1);
 		if (fields != null) {
 			query.addFields(fields);
 		}
-		return elasticsearchOperations.moreLikeThis(query, Torrent.class);
+		return elasticsearchTemplate.moreLikeThis(query, Torrent.class);
     }
+
+    private ResultsMapper highlightResultMapper = new DefaultResultMapper() {
+
+		@Override
+		public <T> AggregatedPage<T> mapResults(SearchResponse response, Class<T> clazz, Pageable pageable) {
+
+			long totalHits = response.getHits().getTotalHits();
+			float maxScore = response.getHits().getMaxScore();
+
+			List<Torrent> results = new ArrayList<>();
+			for (SearchHit hit : response.getHits().getHits()) {
+				if (hit == null)
+					continue;
+				Torrent result;
+				result = JSON.parseObject(hit.getSourceAsString(), Torrent.class);
+				result.setInfoHash(hit.getId());
+				if (hit.getHighlightFields().containsKey("fileName"))
+					result.setFileName(hit.getHighlightFields().get("fileName").fragments()[0].toString());
+				else
+					result.setFileName((String) hit.getSourceAsMap().get("fileName"));
+				results.add(result);
+			}
+			return new AggregatedPageImpl<>((List<T>) results, pageable, totalHits, response.getAggregations(), response.getScrollId(),
+					maxScore);
+		}
+
+	};
 
 
 }

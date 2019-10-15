@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-cn" xmlns:th="http://www.thymeleaf.org">
 <div class="dodder-fly-header layui-bg-green" th:fragment="header">
-    <h3><a th:href="@{/}">菟丝子资源社区</a></h3>
+    <h3><i class="layui-icon layui-icon-snowflake" style="
+    font-size: 30px;
+    vertical-align: middle;
+"></i><a th:href="@{/}">菟丝子资源社区</a></h3>
     <div class="layui-container">
         <div class="dodder-search-box dodder-pull-right">
             <input placeholder="搜索内容" th:value="${searchRequest != null ? searchRequest.fileName : ''}" type="text" name="number"
