@@ -1,6 +1,7 @@
 package cc.dodder.dhtserver.netty;
 
 
+import cc.dodder.common.util.BloomFilter;
 import cc.dodder.common.util.NodeIdUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -11,6 +12,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,10 +39,15 @@ public class DHTServer {
 
 	private ChannelFuture serverChannelFuture;
 
+	public BloomFilter bloomFilter;
+	private String filterSavePath;
+
 	/**
-	 * 本机 DHT 节点 ID
+	 * 本机 DHT 节点 ID （根据 IP 生成）
 	 */
-	public static final byte[] SELF_NODE_ID = NodeIdUtil.createRandomNodeId();
+	public static final byte[] SELF_NODE_ID = NodeIdUtil.randSelfNodeId();
+
+	public static final int SECRET = 888;
 
 	/**
 	 * 启动节点列表
@@ -60,6 +68,21 @@ public class DHTServer {
 		log.info("Starting dht server at " + udpPort);
 		serverChannelFuture = b.bind(udpPort).sync();
 		serverChannelFuture.channel().closeFuture();
+
+		//init bloom filter
+		bloomFilter = new BloomFilter(10000000);
+		String path = System.getProperty("java.class.path");
+		int firstIndex = path.lastIndexOf(System.getProperty("path.separator")) + 1;
+		int lastIndex = path.lastIndexOf(File.separator) + 1;
+		filterSavePath = path.substring(firstIndex, lastIndex) + "filter.data";
+		File file = new File(filterSavePath);
+		if (file.exists())
+			BloomFilter.readFilterFromFile(filterSavePath);
+	}
+
+	@PreDestroy
+	public void saveBloomFilter() {
+		bloomFilter.saveFilterToFile(filterSavePath);
 	}
 
 	/**

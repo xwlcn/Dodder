@@ -1,9 +1,10 @@
+server:
+  port: 8766
 ## netty服务器端口
 netty:
   udp:
     port: 6688
   so:
-    backlog: 100
     rcvbuf: 268435456
     sndbuf: 65536
 

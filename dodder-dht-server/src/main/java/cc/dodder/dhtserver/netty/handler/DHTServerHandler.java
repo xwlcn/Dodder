@@ -14,7 +14,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import lombok.extern.slf4j.Slf4j;
-import org.bouncycastle.util.Arrays;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.MessageHeaders;
@@ -31,7 +30,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /***
  * 参见 Bittorrent 协议：
@@ -47,15 +45,18 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	@Autowired
 	private DHTServer dhtServer;
 
-	@Autowired
 	private RedisTemplate redisTemplate;
-	@Autowired
 	private MessageStreams messageStreams;
 
-	private ExecutorService pool = Executors.newCachedThreadPool();
-
+	private ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
 
 	public static final UniqueBlockingQueue NODES_QUEUE = new UniqueBlockingQueue();
+
+	@Autowired
+	public DHTServerHandler(RedisTemplate redisTemplate, MessageStreams messageStreams) {
+		this.redisTemplate = redisTemplate;
+		this.messageStreams = messageStreams;
+	}
 
 	@Override
 	protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
@@ -97,10 +98,10 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		//log.info("on query, query name is {}", q);
 		switch (q) {
 			case "ping"://ping Query = {"t":"aa", "y":"q", "q":"ping", "a":{"id":"发送者ID"}}
-				responsePing(t, sender);
+				responsePing(t, (byte[]) a.get("id"), sender);
 				break;
 			case "find_node"://find_node Query = {"t":"aa", "y":"q", "q":"find_node", "a": {"id":"abcdefghij0123456789", "target":"mnopqrstuvwxyz123456"}}
-				responseFindNode(t, sender);
+				responseFindNode(t, (byte[]) a.get("id"), sender);
 				break;
 			case "get_peers"://get_peers Query = {"t":"aa", "y":"q", "q":"get_peers", "a": {"id":"abcdefghij0123456789", "info_hash":"mnopqrstuvwxyz123456"}}
 				responseGetPeers(t, (byte[]) a.get("info_hash"), sender);
@@ -118,9 +119,9 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	 * @param t
 	 * @param sender
 	 */
-	private void responsePing(byte[] t, InetSocketAddress sender) {
+	private void responsePing(byte[] t, byte[]nid, InetSocketAddress sender) {
 		Map r = new HashMap<String, Object>();
-		r.put("id", DHTServer.SELF_NODE_ID);
+		r.put("id", NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, nid));
 		DatagramPacket packet = createPacket(t, "r", r, sender);
 		dhtServer.sendKRPC(packet);
 		//log.info("response ping[{}]", sender);
@@ -133,9 +134,9 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	 * @param t
 	 * @param sender
 	 */
-	private void responseFindNode(byte[] t, InetSocketAddress sender) {
+	private void responseFindNode(byte[] t, byte[] nid, InetSocketAddress sender) {
 		HashMap<String, Object> r = new HashMap<>();
-		r.put("id", DHTServer.SELF_NODE_ID);
+		r.put("id", NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, nid));
 		r.put("nodes", new byte[]{});
 		DatagramPacket packet = createPacket(t, "r", r, sender);
 		dhtServer.sendKRPC(packet);
@@ -150,6 +151,9 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	 * @param sender
 	 */
 	private void responseGetPeers(byte[] t, byte[] info_hash, InetSocketAddress sender) {
+		//check bloom filter, if exists then don't reply it
+		if (dhtServer.bloomFilter.check(ByteUtil.byteArrayToHex(info_hash)))
+			return;
 		HashMap<String, Object> r = new HashMap<>();
 		r.put("token", new byte[]{info_hash[0], info_hash[1]});
 		r.put("nodes", new byte[]{});
@@ -178,6 +182,9 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 
 		byte[] info_hash = (byte[]) a.get("info_hash");
 		byte[] token = (byte[]) a.get("token");
+		byte[] id = (byte[]) a.get("id");
+		if(token.length != 2 || info_hash[0] != token[0] || info_hash[1] != token[1])
+			return;
 		int port;
 		if (a.containsKey("implied_port") && ((BigInteger) a.get("implied_port")).shortValue() != 0) {
 			port = sender.getPort();
@@ -186,28 +193,22 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		}
 
 		HashMap<String, Object> r = new HashMap<>();
-		r.put("id", NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, info_hash));
+		byte[] nodeId = NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, id);
+		r.put("id", nodeId);
 		DatagramPacket packet = createPacket(t, "r", r, sender);
 		dhtServer.sendKRPC(packet);
-		// 将 info_hash 放进消息队列
-		if (token.length == 2 && info_hash[0] == token[0] && info_hash[1] == token[1]) {    //check token
-			/*byte[] rightByte = new byte[10];
-			System.arraycopy(info_hash, 10, rightByte,0, 10);
-			byte[] key = Arrays.concatenate(sender.getHostString().getBytes(), rightByte);*/
-			//使用 redis 将消息队列去重
-			if (redisTemplate.hasKey(info_hash))
-				return;
-			/*if (redisTemplate.hasKey(info_hash) || redisTemplate.opsForValue().getAndSet(key, new byte[0]) != null) {
-				return;
-			}
-			redisTemplate.expire(key, 5, TimeUnit.MINUTES);*/
-			log.error("info_hash[AnnouncePeer] : {}:{} - {}", sender.getHostString(), port, ByteUtil.byteArrayToHex(info_hash));
-			messageStreams.downloadMessageOutput()
-					.send(MessageBuilder
-							.withPayload(new DownloadMsgInfo(sender.getHostString(), port, info_hash))
-							.setHeader(MessageHeaders.CONTENT_TYPE, MimeTypeUtils.APPLICATION_JSON)
-							.build());
+		//check exists, if exists then add to bloom filter
+		if (redisTemplate.hasKey(info_hash)) {
+			dhtServer.bloomFilter.add(ByteUtil.byteArrayToHex(info_hash));
+			return;
 		}
+		log.error("info_hash[AnnouncePeer] : {}:{} - {}", sender.getHostString(), port, ByteUtil.byteArrayToHex(info_hash));
+		//send to kafka
+		messageStreams.downloadMessageOutput()
+				.send(MessageBuilder
+						.withPayload(new DownloadMsgInfo(sender.getHostString(), port, nodeId, info_hash))
+						.setHeader(MessageHeaders.CONTENT_TYPE, MimeTypeUtils.APPLICATION_JSON)
+						.build());
 	}
 
 	/**
@@ -280,7 +281,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		HashMap<String, Object> map = new HashMap<>();
 		map.put("target", target);
 		if (nid != null)
-			map.put("id", NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, nid));
+			map.put("id", NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, target));
 		DatagramPacket packet = createPacket("find_node".getBytes(), "q", map, address);
 		dhtServer.sendKRPC(packet);
 	}

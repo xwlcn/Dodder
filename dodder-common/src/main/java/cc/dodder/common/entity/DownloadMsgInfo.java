@@ -16,12 +16,14 @@ public class DownloadMsgInfo implements Serializable {
 
 	private String ip;
 	private int port;
+	private byte[] nodeId;		//make sure download peer id is same to DHT server
 	private byte[] infoHash;
 	private long timestamp;
 
-	public DownloadMsgInfo(String ip, int port, byte[] infoHash) {
+	public DownloadMsgInfo(String ip, int port, byte[] nodeId, byte[] infoHash) {
 		this.ip = ip;
 		this.port = port;
+		this.nodeId = nodeId;
 		this.infoHash = infoHash;
 		timestamp = SystemClock.now();
 	}

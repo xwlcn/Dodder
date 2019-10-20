@@ -10,7 +10,7 @@ spring:
       pool:
         max-idle: 8
         min-idle: 0
-        max-active: 8
+        max-active: 500
         max-wait: -1ms
   cloud:
     stream:
@@ -23,6 +23,8 @@ spring:
           group: torrent-download-group
           destination: downloadMessages
           contentType: application/json
+          consumer:
+            compressionType: gzip
         torrent-message-out:
           destination: torrentMessages
           contentType: application/json
@@ -49,4 +51,4 @@ management:
 
 download:
   num:
-    thread: 500
+    thread: 1000

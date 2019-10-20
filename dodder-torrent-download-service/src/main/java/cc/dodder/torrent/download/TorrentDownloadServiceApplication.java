@@ -1,13 +1,10 @@
 package cc.dodder.torrent.download;
 
-import cc.dodder.api.StoreFeignClient;
 import cc.dodder.common.entity.DownloadMsgInfo;
-import cc.dodder.common.util.SystemClock;
-import cc.dodder.torrent.download.client.Constants;
 import cc.dodder.torrent.download.stream.MessageStreams;
+import cc.dodder.torrent.download.task.BlockingExecutor;
 import cc.dodder.torrent.download.task.DownloadTask;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,16 +12,12 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.StreamListener;
-import org.springframework.kafka.support.Acknowledgment;
-import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.messaging.Message;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Slf4j
@@ -39,7 +32,7 @@ public class TorrentDownloadServiceApplication {
 	@Value("${download.num.thread}")
 	private int nThreads;
 
-	private ExecutorService downloadTasks;
+	private BlockingExecutor blockingExecutor;
 
 	public static void main(String[] args) {
 		SpringApplication.run(TorrentDownloadServiceApplication.class, args);
@@ -47,17 +40,12 @@ public class TorrentDownloadServiceApplication {
 
 	@StreamListener("download-message-in")
 	public void handleMessage(DownloadMsgInfo msgInfo) {
-		long now = SystemClock.now();
-		//延迟3分钟下载
-		if (now - msgInfo.getTimestamp() < 3 * 60 * 1000) {
-			try {
-				Thread.sleep(3 * 60 * 1000 - (now - msgInfo.getTimestamp()));
-			} catch (InterruptedException e) {
-			}
+		//submit to blocking executor
+		try {
+			blockingExecutor.execute(new DownloadTask(msgInfo));
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
-
-		//丢进线程池进行下载
-		downloadTasks.execute(new DownloadTask(msgInfo));
 	}
 
 	@Scheduled(fixedDelay = 5 * 60 * 1000)
@@ -69,15 +57,13 @@ public class TorrentDownloadServiceApplication {
 
 	@PostConstruct
 	public void init() {
-		/*downloadTasks = new ThreadPoolExecutor(nThreads, nThreads,
-				0L, TimeUnit.MILLISECONDS,
-				new LinkedBlockingQueue<>(nThreads + nThreads / 2), new ThreadPoolExecutor.DiscardPolicy());*/
-		downloadTasks = Executors.newFixedThreadPool(nThreads);
+		//max task bound 5000
+		blockingExecutor = new BlockingExecutor(Executors.newFixedThreadPool(nThreads), 5000);
 	}
 
 	@PreDestroy
 	public void destroy() {
-		downloadTasks.shutdownNow();
+		blockingExecutor.shutdownNow();
 	}
 
 }

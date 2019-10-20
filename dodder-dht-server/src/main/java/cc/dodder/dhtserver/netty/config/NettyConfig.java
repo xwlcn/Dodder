@@ -33,8 +33,6 @@ public class NettyConfig implements ApplicationListener<ContextClosedEvent> {
 
 	@Value("${netty.udp.port}")
 	private int udpPort;
-	@Value("${netty.so.backlog}")
-	private int backlog;
 	@Value("${netty.so.rcvbuf}")
 	private int rcvbuf;
 	@Value("${netty.so.sndbuf}")
@@ -54,11 +52,11 @@ public class NettyConfig implements ApplicationListener<ContextClosedEvent> {
 		b.group(group)
 				.channel(NioDatagramChannel.class)
 				.handler(channelInitializer);
-		Map<ChannelOption<?>, Object> tcpChannelOptions = udpChannelOptions();
-		Set<ChannelOption<?>> keySet = tcpChannelOptions.keySet();
+		Map<ChannelOption<?>, Object> udpChannelOptions = udpChannelOptions();
+		Set<ChannelOption<?>> keySet = udpChannelOptions.keySet();
 		for (@SuppressWarnings("rawtypes")
 				ChannelOption option : keySet) {
-			b.option(option, tcpChannelOptions.get(option));
+			b.option(option, udpChannelOptions.get(option));
 		}
 		return b;
 	}
@@ -76,8 +74,8 @@ public class NettyConfig implements ApplicationListener<ContextClosedEvent> {
 	@Bean(name = "udpChannelOptions")
 	public Map<ChannelOption<?>, Object> udpChannelOptions() {
 		Map<ChannelOption<?>, Object> options = new HashMap<ChannelOption<?>, Object>();
-		options.put(ChannelOption.SO_BACKLOG, backlog);
 		options.put(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+		options.put(ChannelOption.SO_BROADCAST, true);
 		options.put(ChannelOption.SO_RCVBUF, rcvbuf);
 		options.put(ChannelOption.SO_SNDBUF, sndbuf);
 		return options;

@@ -52,6 +52,8 @@ public class PeerWireClient {
 
 	private byte[] metadata;
 
+	private byte[] peerId;
+
 	/**
 	 * 下载完成监听器
 	 */
@@ -62,7 +64,8 @@ public class PeerWireClient {
 	}
 
 
-	public void downloadMetadata(InetSocketAddress address, byte[] infoHash) {
+	public void downloadMetadata(InetSocketAddress address, byte[] peerId, byte[] infoHash) {
+		this.peerId = peerId;
 		hexHash = ByteUtil.byteArrayToHex(infoHash);
 		socket = new Socket();
 		try {
@@ -110,7 +113,7 @@ public class PeerWireClient {
 		out.write(infoHash);
 
 		/*peer_id*/
-		out.write(Constants.PEER_ID);
+		out.write(peerId);
 
 		out.flush();
 

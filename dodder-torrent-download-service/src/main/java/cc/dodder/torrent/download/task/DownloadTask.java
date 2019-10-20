@@ -39,7 +39,6 @@ public class DownloadTask implements Runnable {
 		/*byte[] rightByte = new byte[10];
 		System.arraycopy(msgInfo.getInfoHash(), 10, rightByte,0, 10);
 		byte[] key = Arrays.concatenate(msgInfo.getIp().getBytes(), rightByte);*/
-		RedisTemplate redisTemplate = (RedisTemplate) SpringContextUtil.getBean("redisTemplate");
 		//由于下载线程消费的速度总是比 dht server 生产的速度慢，所以要做一下时间限制，否则程序越跑越慢
 		if (SystemClock.now() - msgInfo.getTimestamp() >= Constants.MAX_LOSS_TIME) {
 			return;
@@ -48,6 +47,7 @@ public class DownloadTask implements Runnable {
 		StoreFeignClient storeFeignClient = (StoreFeignClient) SpringContextUtil.getBean(StoreFeignClient.class);
 		Result result = storeFeignClient.existHash(ByteUtil.byteArrayToHex(msgInfo.getInfoHash()));
 		if (result.getStatus() == HttpStatus.NO_CONTENT.value()) {
+			RedisTemplate redisTemplate = (RedisTemplate) SpringContextUtil.getBean("redisTemplate");
 			redisTemplate.opsForValue().set(msgInfo.getInfoHash(), new byte[0]);
 			return;
 		}
@@ -55,10 +55,11 @@ public class DownloadTask implements Runnable {
 		PeerWireClient wireClient = new PeerWireClient();
 		//设置下载完成监听器
 		wireClient.setOnFinishedListener((torrent) -> {
-
 			if (torrent == null) {  //下载失败
 				return;
 			}
+			RedisTemplate redisTemplate = (RedisTemplate) SpringContextUtil.getBean("redisTemplate");
+			torrent.setCreateDate(msgInfo.getTimestamp());
 			redisTemplate.opsForValue().set(msgInfo.getInfoHash(), new byte[0]);
 			messageStreams = (MessageStreams) SpringContextUtil.getBean(MessageStreams.class);
 			//丢进 kafka 消息队列进行入库操作
@@ -76,6 +77,6 @@ public class DownloadTask implements Runnable {
 					msgInfo.getPort(),
 					torrent.getInfoHash());
 		});
-		wireClient.downloadMetadata(new InetSocketAddress(msgInfo.getIp(), msgInfo.getPort()), msgInfo.getInfoHash());
+		wireClient.downloadMetadata(new InetSocketAddress(msgInfo.getIp(), msgInfo.getPort()), msgInfo.getNodeId(), msgInfo.getInfoHash());
 	}
 }
