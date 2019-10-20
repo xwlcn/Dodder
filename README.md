@@ -18,6 +18,9 @@ _  /_/ // /_/ / /_/ / / /_/ / /  __/  /
 #### 演示地址
 [https://dodder.cc](https://dodder.cc)
 
+announce_peer messages:
+![announce_peer](https://github.com/xwlcn/img/raw/master/announce_peer.gif)
+
 单机运行环境：
 * CPU:	Intel Xeon E3-1230 v3 - 3.3 GHz - 4 core(s)
 * RAM:	32GB - DDR3
