@@ -9,7 +9,8 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-import static org.elasticsearch.index.query.QueryBuilders.*;
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
 import static org.elasticsearch.search.sort.SortBuilders.fieldSort;
 import static org.elasticsearch.search.sort.SortOrder.ASC;
 import static org.elasticsearch.search.sort.SortOrder.DESC;
@@ -64,8 +66,8 @@ public class TorrentDaoImpl implements TorrentDao {
         IndexRequest indexRequest = new IndexRequest("dodder", "torrent", torrent.getInfoHash())
                 .source(source);
         UpdateRequest updateRequest = new UpdateRequest("dodder", "torrent", torrent.getInfoHash())
-                .doc(source)
-                .upsert(indexRequest);
+                .doc(indexRequest)
+                .docAsUpsert(true);
         client.update(updateRequest);
     }
 

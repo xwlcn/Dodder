@@ -12,7 +12,7 @@ _  /_/ // /_/ / /_/ / / /_/ / /  __/  /
 - Zookeeper-3.5.5 ([http://zookeeper.apache.org/](http://zookeeper.apache.org/))
 - Kafka-2.12-2.3.0 ([http://kafka.apache.org/](http://kafka.apache.org/))
 - Redis-2.6 ([https://redis.io/](https://redis.io/))
-- MongoDB-3.6.8 ([https://www.mongodb.com/](https://www.mongodb.com/))
+- MongoDB-4.0.13 ([https://www.mongodb.com/](https://www.mongodb.com/))
 - Elasticsearch-7.3.2 ([https://www.elastic.co/](https://www.elastic.co/))
 - elasticsearch-analysis-ik-7.3.2 ([https://github.com/medcl/elasticsearch-analysis-ik](https://github.com/medcl/elasticsearch-analysis-ik))
 #### 演示地址
@@ -28,6 +28,11 @@ announce_peer messages:
 * Bandwidth:	Unmetered @ 1Gbps
 
 #### 更新日志
+* 2019-10-25
+  - 升级目前部署在服务器上的 MongoDB，之前 3.6.8 版本频繁挂掉无错误日志
+  - 使用 MongoDB 连接池
+  - 去掉 indexMessages 主题消息，索引与入库使用 torrentMessages 同一个主题消息（使用不同分组），减少网络传输以及磁盘占用
+  - 去除种子信息下载之前的 MongoDB 去重查询（几千个下载线程就是几千个并发查询，过于耗费资源）
 * 2019-10-20
   - 优化爬虫速度，新增阻塞线程池用于下载种子信息（降低内存使用）
   - 40万数据时（日爬取35w+新数据）
@@ -50,9 +55,7 @@ announce_peer messages:
 分区数量 >= 服务部署个数）。下载好的 metadata 解析出文件信息封装成 Torrent 对象写入 Kafka 的
 `torrentMessages`主题中去，`store-service`负责读取 Torrent 存储到 Elasticsearch 中去。
 
-去重：`dht-server`中使用`Redis`第一次进行拦截过滤，`download-service`查询`Elasticsearch`进行
-二次判断去重，`store-service`中采用`upsert`进行第三次去重。实际上`upsert`已经完全可以进行去重了，
-前面两次是用来减少下载次数，提升爬取的速度。
+去重：Redis 第一次去重，MongDB 与 Elasticsearch 采用 upsert 插入数据防止重复插入。
 
 #### 部署
 前面的环境全部搭好之后，clone 整个项目到本地，如果是集群部署请修改各个服务模块里面的一些 ip 地址参数，

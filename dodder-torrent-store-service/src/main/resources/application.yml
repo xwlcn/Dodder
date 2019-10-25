@@ -21,7 +21,7 @@ spring:
             autoCommitOffset: false #设置手动提交偏移
         index-message-in:
           group: torrent-index-group
-          destination: indexMessages
+          destination: torrentMessages
           contentType: application/json
           consumer:
             compressionType: gzip
@@ -35,8 +35,6 @@ spring:
         path:
           logs: ./elasticsearch/log #elasticsearch日志存储目录
           data: ./elasticsearch/data #elasticsearch数据存储目录
-    mongodb:
-      uri: mongodb://dodder:123456@127.0.0.1:27017/dodder
   main:
     allow-bean-definition-overriding: true
 management:
