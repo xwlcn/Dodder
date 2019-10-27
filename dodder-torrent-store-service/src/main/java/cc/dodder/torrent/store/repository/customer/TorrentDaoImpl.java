@@ -2,8 +2,7 @@ package cc.dodder.torrent.store.repository.customer;
 
 import cc.dodder.common.entity.Torrent;
 import cc.dodder.common.request.SearchRequest;
-import com.alibaba.fastjson.JSON;
-import org.apache.commons.lang3.StringUtils;
+import cc.dodder.common.util.JSONUtil;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
@@ -27,6 +26,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -138,7 +138,7 @@ public class TorrentDaoImpl implements TorrentDao {
 				if (hit == null)
 					continue;
 				Torrent result;
-				result = JSON.parseObject(hit.getSourceAsString(), Torrent.class);
+				result = JSONUtil.parseObject(hit.getSourceAsString(), Torrent.class);
 				result.setInfoHash(hit.getId());
 				if (hit.getHighlightFields().containsKey("fileName"))
 					result.setFileName(hit.getHighlightFields().get("fileName").fragments()[0].toString());

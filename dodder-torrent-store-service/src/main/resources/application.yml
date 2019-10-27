@@ -4,9 +4,6 @@ spring:
   application:
     name: torrent-store-service
   cloud:
-    nacos:
-      discovery:
-        server-addr: 127.0.0.1:8848
     stream:
       kafka:
         binder:
@@ -35,13 +32,16 @@ spring:
         path:
           logs: ./elasticsearch/log #elasticsearch日志存储目录
           data: ./elasticsearch/data #elasticsearch数据存储目录
-  main:
-    allow-bean-definition-overriding: true
-management:
-  endpoints:
-    web:
-      exposure:
-        include: ["*"]
-
+#  main:
+#    allow-bean-definition-overriding: true
+dubbo:
+  protocol:
+    name: dubbo
+    port: -1
+  registry:
+    address: zookeeper://127.0.0.1:2181
+  scan:
+    base-packages: cc.dodder.torrent.store.api.impl
 logging:
-  level: debug
+  level:
+    root: info

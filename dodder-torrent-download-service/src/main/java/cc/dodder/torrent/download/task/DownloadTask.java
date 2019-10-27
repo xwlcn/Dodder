@@ -32,20 +32,10 @@ public class DownloadTask implements Runnable {
 
 	@Override
 	public void run() {
-		/*byte[] rightByte = new byte[10];
-		System.arraycopy(msgInfo.getInfoHash(), 10, rightByte,0, 10);
-		byte[] key = Arrays.concatenate(msgInfo.getIp().getBytes(), rightByte);*/
 		//由于下载线程消费的速度总是比 dht server 生产的速度慢，所以要做一下时间限制，否则程序越跑越慢
 		if (SystemClock.now() - msgInfo.getTimestamp() >= Constants.MAX_LOSS_TIME) {
 			return;
 		}
-		/*StoreFeignClient storeFeignClient = (StoreFeignClient) SpringContextUtil.getBean(StoreFeignClient.class);
-		Result result = storeFeignClient.existHash(ByteUtil.byteArrayToHex(msgInfo.getInfoHash()));
-		if (result.getStatus() == HttpStatus.NO_CONTENT.value()) {
-			RedisTemplate redisTemplate = (RedisTemplate) SpringContextUtil.getBean("redisTemplate");
-			redisTemplate.opsForValue().set(msgInfo.getInfoHash(), new byte[0]);
-			return;
-		}*/
 		PeerWireClient wireClient = new PeerWireClient();
 		//设置下载完成监听器
 		wireClient.setOnFinishedListener((torrent) -> {

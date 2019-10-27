@@ -20,6 +20,10 @@ public class DownloadMsgInfo implements Serializable {
 	private byte[] infoHash;
 	private long timestamp;
 
+	public DownloadMsgInfo() {
+
+	}
+
 	public DownloadMsgInfo(String ip, int port, byte[] nodeId, byte[] infoHash) {
 		this.ip = ip;
 		this.port = port;

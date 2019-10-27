@@ -1,12 +1,15 @@
 package cc.dodder.web.controller;
 
-import cc.dodder.api.StoreFeignClient;
-import cc.dodder.common.entity.*;
+import cc.dodder.api.TorrentApi;
+import cc.dodder.common.entity.Node;
+import cc.dodder.common.entity.Result;
+import cc.dodder.common.entity.Torrent;
+import cc.dodder.common.entity.Tree;
 import cc.dodder.common.request.SearchRequest;
+import cc.dodder.common.util.JSONUtil;
 import cc.dodder.common.vo.TorrentPageVO;
 import cc.dodder.common.vo.TorrentVO;
-import com.alibaba.fastjson.JSON;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.dubbo.config.annotation.Reference;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,8 +20,8 @@ import java.util.Arrays;
 @Controller
 public class IndexController {
 
-	@Autowired
-	private StoreFeignClient storeFeignClient;
+	@Reference(check = false)
+	private TorrentApi torrentApi;
 
 	@RequestMapping("/")
 	public String index(SearchRequest searchRequest, Model model) {
@@ -26,7 +29,7 @@ public class IndexController {
 			searchRequest = new SearchRequest();
 		if (searchRequest.getPage() != null && searchRequest.getPage() > 500)
 			searchRequest.setPage(500);
-		Result<TorrentPageVO> result = storeFeignClient.torrents(searchRequest);
+		Result<TorrentPageVO> result = torrentApi.torrents(searchRequest);
 		model.addAttribute("result", result);
 		model.addAttribute("searchRequest", searchRequest);
 		return "index";
@@ -36,7 +39,7 @@ public class IndexController {
 	public String info(@PathVariable("infoHash") String infoHash, Model model) {
 		if (!infoHash.matches("^[a-zA-Z0-9]{40}$"))
 			return "error/404";
-		Result<TorrentVO> result = storeFeignClient.findById(infoHash);
+		Result<TorrentVO> result = torrentApi.findById(infoHash);
 		if (result.getData().getTorrent() == null)
 			return "error/404";
 		Tree tree;
@@ -47,7 +50,7 @@ public class IndexController {
 			tree = new Tree(name);
 			tree.createTree(Arrays.asList(new Node(1, 0, torrent.getFileName(), torrent.getFileSize(), 1)));
 		} else {
-			tree = JSON.parseObject(torrent.getFiles(), Tree.class);
+			tree = JSONUtil.parseObject(torrent.getFiles(), Tree.class);
 			tree.getRoot().setFilename(torrent.getFileName());
 		}
 		model.addAttribute("treeFiles", tree.getHtml(tree.getRoot()));

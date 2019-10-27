@@ -3,6 +3,8 @@ package cc.dodder.common.request;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.io.Serializable;
+
 /***
  * 搜索请求
  *
@@ -10,7 +12,7 @@ import lombok.Setter;
  * @date 2019-03-02 13:52
  **/
 @Getter @Setter
-public class SearchRequest {
+public class SearchRequest implements Serializable {
 
 	private String fileName;
 	private String fileType;

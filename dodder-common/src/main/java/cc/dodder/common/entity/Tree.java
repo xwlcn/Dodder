@@ -3,7 +3,7 @@ package cc.dodder.common.entity;
 
 import cc.dodder.common.util.FileTypeUtil;
 import cc.dodder.common.util.StringUtil;
-import com.alibaba.fastjson.annotation.JSONField;
+import org.springframework.data.annotation.Transient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ public class Tree {
 
 	private Node root;
 
-	@JSONField(serialize = false)
+	@Transient
 	private List<Node> leaves;
 	
 	public Tree() {
@@ -65,7 +65,7 @@ public class Tree {
 	 * 构建叶子节点数组，实际上就是构建子文件列表
 	 * @return
 	 */
-	@JSONField(serialize = false)
+	@Transient
 	public List<Node> getLeafList() {
 		leaves = new ArrayList<>();
 		deep(root);

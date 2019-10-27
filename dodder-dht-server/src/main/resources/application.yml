@@ -31,4 +31,5 @@ spring:
           producer:
             compressionType: gzip
 logging:
-  level: error
+  level:
+    root: info

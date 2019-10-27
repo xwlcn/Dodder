@@ -3,7 +3,6 @@ package cc.dodder.common.util;
 import cc.dodder.common.entity.Node;
 import cc.dodder.common.entity.Torrent;
 import cc.dodder.common.entity.Tree;
-import com.alibaba.fastjson.JSON;
 import info.monitorenter.cpdetector.io.*;
 
 import java.io.ByteArrayInputStream;
@@ -202,7 +201,7 @@ public class StringUtil {
 			return Arrays.asList(new Node(1, 0, sname, torrent.getFileSize(), 1));
 		}
 
-		Tree tree = JSON.parseObject(torrent.getFiles(), Tree.class);
+		Tree tree = JSONUtil.parseObject(torrent.getFiles(), Tree.class);
 		return tree.getLeafList();
 	}
 

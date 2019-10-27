@@ -3,13 +3,13 @@ server:
 spring:
   application:
     name: web
-  cloud:
-    nacos:
-      discovery:
-        server-addr: 127.0.0.1:8848
+
   thymeleaf:
     cache: false
     mode: LEGACYHTML5
   mvc:
     favicon:
       enabled: false
+dubbo:
+  registry:
+    address: zookeeper://127.0.0.1:2181

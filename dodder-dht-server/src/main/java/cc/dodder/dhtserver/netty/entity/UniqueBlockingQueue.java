@@ -16,6 +16,10 @@ public class UniqueBlockingQueue {
 	private Set<String> ips = new HashSet<>();
 	private BlockingQueue<Node> nodes = new LinkedBlockingQueue<>();
 
+	public int size() {
+		return ips.size();
+	}
+
 	public boolean isEmpty() {
 		return nodes.isEmpty();
 	}
