@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.1.9.RELEASE</version>
+        <version>2.4.3</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
@@ -23,13 +23,14 @@
         <module>dodder-torrent-store-service</module>
         <module>dodder-web</module>
         <module>dodder-api</module>
+        <module>words</module>
     </modules>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>1.8</java.version>
-        <spring-cloud.version>Greenwich.RELEASE</spring-cloud.version>
+        <spring-cloud.version>2020.0.2</spring-cloud.version>
         <skipTests>true</skipTests>
     </properties>
 
@@ -62,9 +63,9 @@
 
     <repositories>
         <repository>
-            <id>nuiton</id>
-            <name>Nexus nuiton</name>
-            <url>http://maven.nuiton.org/release/</url>
+            <id>nexus-ebi</id>
+            <name>Nexus ebi</name>
+            <url>https://www.ebi.ac.uk/intact/maven/nexus/content/repositories/public/</url>
         </repository>
         <repository>
             <id>nexus-aliyun</id>

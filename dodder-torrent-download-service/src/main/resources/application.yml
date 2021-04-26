@@ -8,9 +8,9 @@ spring:
     port: 6379
     jedis:
       pool:
-        max-idle: 8
+        max-idle: 1000
         min-idle: 0
-        max-active: 500
+        max-active: 1000
         max-wait: -1ms
   cloud:
     stream:
@@ -19,17 +19,23 @@ spring:
           brokers: 127.0.0.1
           min-partition-count: 1
       bindings:
-        download-message-in:
+        handle-in-0:
           group: torrent-download-group
           destination: downloadMessages
           contentType: application/json
           consumer:
+            max-poll-records: 500
+            batch-mode: true
             compressionType: gzip
-        torrent-message-out:
+        handle-out-0:
           destination: torrentMessages
           contentType: application/json
           producer:
             compressionType: gzip
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    consumer:
+      auto-offset-reset: earliest
 
 feign:
   httpclient:
@@ -44,3 +50,4 @@ management:
 download:
   num:
     thread: 2500
+  enable-filter-sensitive-words: true     #是否开启过滤敏感词

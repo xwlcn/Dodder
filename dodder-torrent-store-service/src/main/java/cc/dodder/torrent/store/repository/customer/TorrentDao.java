@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.io.IOException;
+import java.util.List;
 
 /***
  * 自定义扩展 Torrent Dao
@@ -26,10 +27,10 @@ public interface TorrentDao {
 	/**
 	* 存在则更新，不存在则插入
 	*
-	* @param torrent
+	* @param torrents
 	* @return void
 	*/
-	void upsert(Torrent torrent);
+	void upsert(Torrent torrents);
 
 	/**
 	* 分页搜索

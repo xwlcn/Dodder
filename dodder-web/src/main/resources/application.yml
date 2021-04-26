@@ -7,9 +7,7 @@ spring:
   thymeleaf:
     cache: false
     mode: LEGACYHTML5
-  mvc:
-    favicon:
-      enabled: false
-dubbo:
-  registry:
-    address: zookeeper://127.0.0.1:2181
+store:
+  service:
+    version: 1.0.0
+    url: dubbo://89.163.140.138:23456

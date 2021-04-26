@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:mongo="http://www.springframework.org/schema/data/mongo"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation=
+               "http://www.springframework.org/schema/data/mongo https://www.springframework.org/schema/data/mongo/spring-mongo.xsd
+          http://www.springframework.org/schema/beans
+          https://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:property-placeholder location="classpath:mongodb.properties"/>
+    <mongo:mapping-converter auto-index-creation="true" />
+
+    <mongo:mongo-client connection-string="mongodb://dodder:qwerREWQ@127.0.0.1:27017/dodder">
+        <mongo:client-settings
+                connection-pool-min-size="${mongo.pool-min-size}"
+                connection-pool-max-size="${mongo.pool-max-size}"
+                connection-pool-maintenance-frequency="10"
+                connection-pool-maintenance-initial-delay="11"
+                connection-pool-max-connection-idle-time="1800000"
+                connection-pool-max-wait-time="10000"
+        />
+    </mongo:mongo-client>
+
+    <mongo:db-factory dbname="${mongo.dbname}" mongo-client-ref="mongoClient"/>
+
+</beans>

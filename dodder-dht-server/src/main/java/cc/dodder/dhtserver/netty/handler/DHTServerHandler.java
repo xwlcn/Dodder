@@ -2,12 +2,12 @@ package cc.dodder.dhtserver.netty.handler;
 
 import cc.dodder.common.entity.DownloadMsgInfo;
 import cc.dodder.common.util.ByteUtil;
+import cc.dodder.common.util.JSONUtil;
 import cc.dodder.common.util.NodeIdUtil;
 import cc.dodder.common.util.bencode.BencodingUtils;
 import cc.dodder.dhtserver.netty.DHTServer;
 import cc.dodder.dhtserver.netty.entity.Node;
 import cc.dodder.dhtserver.netty.entity.UniqueBlockingQueue;
-import cc.dodder.dhtserver.stream.MessageStreams;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -16,10 +16,8 @@ import io.netty.channel.socket.DatagramPacket;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.messaging.MessageHeaders;
-import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.util.MimeTypeUtils;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -28,8 +26,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /***
  * 参见 Bittorrent 协议：
@@ -42,20 +38,19 @@ import java.util.concurrent.Executors;
 @ChannelHandler.Sharable
 public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket> {
 
-	@Autowired
 	private DHTServer dhtServer;
-
 	private RedisTemplate redisTemplate;
-	private MessageStreams messageStreams;
+	private KafkaTemplate kafkaTemplate;
 
-	private ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
+	//private ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
 
 	public static final UniqueBlockingQueue NODES_QUEUE = new UniqueBlockingQueue();
 
 	@Autowired
-	public DHTServerHandler(RedisTemplate redisTemplate, MessageStreams messageStreams) {
+	public DHTServerHandler(DHTServer dhtServer, RedisTemplate redisTemplate, KafkaTemplate kafkaTemplate) {
+		this.dhtServer = dhtServer;
 		this.redisTemplate = redisTemplate;
-		this.messageStreams = messageStreams;
+		this.kafkaTemplate = kafkaTemplate;
 	}
 
 	@Override
@@ -63,9 +58,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 
 		byte[] buff = new byte[packet.content().readableBytes()];
 		packet.content().readBytes(buff);
-
-		pool.execute(() -> {
-
+		ctx.executor().execute(() -> {
 			Map<String, ?> map = BencodingUtils.decode(buff);
 
 			if (map == null || map.get("y") == null)
@@ -79,7 +72,6 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 				onResponse(map, packet.sender());
 			}
 		});
-
 	}
 
 	/**
@@ -152,8 +144,8 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	 */
 	private void responseGetPeers(byte[] t, byte[] info_hash, InetSocketAddress sender) {
 		//check bloom filter, if exists then don't reply it
-		if (dhtServer.bloomFilter.check(ByteUtil.byteArrayToHex(info_hash)))
-			return;
+		/*if (dhtServer.bloomFilter.check(ByteUtil.byteArrayToHex(info_hash)))
+			return;*/
 		HashMap<String, Object> r = new HashMap<>();
 		r.put("token", new byte[]{info_hash[0], info_hash[1]});
 		r.put("nodes", new byte[]{});
@@ -198,17 +190,12 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		DatagramPacket packet = createPacket(t, "r", r, sender);
 		dhtServer.sendKRPC(packet);
 		//check exists, if exists then add to bloom filter
-		if (redisTemplate.hasKey(info_hash)) {
-			dhtServer.bloomFilter.add(ByteUtil.byteArrayToHex(info_hash));
+		if (redisTemplate.hasKey(info_hash) ) {
 			return;
 		}
-		log.error("info_hash[AnnouncePeer] : {}:{} - {}", sender.getHostString(), port, ByteUtil.byteArrayToHex(info_hash));
+		//log.error("info_hash[AnnouncePeer] : {}:{} - {}", sender.getHostString(), port, ByteUtil.byteArrayToHex(info_hash));
 		//send to kafka
-		messageStreams.downloadMessageOutput()
-				.send(MessageBuilder
-						.withPayload(new DownloadMsgInfo(sender.getHostString(), port, nodeId, info_hash))
-						.setHeader(MessageHeaders.CONTENT_TYPE, MimeTypeUtils.APPLICATION_JSON)
-						.build());
+		kafkaTemplate.send("downloadMessages", JSONUtil.toJSONString(new DownloadMsgInfo(sender.getHostString(), port, nodeId, info_hash)).getBytes());
 	}
 
 	/**
@@ -289,6 +276,14 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		dhtServer.sendKRPC(packet);
 	}
 
+	private void requestGetPeers(InetSocketAddress address, byte[] nid, byte[] info_hash) {
+		HashMap<String, Object> map = new HashMap<>();
+		map.put("id", NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, nid));
+		map.put("info_hash", info_hash);
+		DatagramPacket packet = createPacket("get_peers".getBytes(), "q", map, address);
+		dhtServer.sendKRPC(packet);
+	}
+
 	/**
 	 * 构造 KRPC 协议数据
 	 *
@@ -330,6 +325,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 						Node node = NODES_QUEUE.poll();
 						if (node != null) {
 							findNode(node.getAddr(), node.getNodeId(), NodeIdUtil.createRandomNodeId());
+							requestGetPeers(node.getAddr(), node.getNodeId(), NodeIdUtil.createRandomNodeId());
 						}
 					} catch (Exception e) {
 					}

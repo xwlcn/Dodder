@@ -9,39 +9,37 @@ spring:
         binder:
           brokers: 127.0.0.1
       bindings:
-        torrent-message-in:
+        handle-in-0:
           group: torrent-store-group
           destination: torrentMessages
           contentType: application/json
           consumer:
+            batch-mode: true
+            max-poll-records: 500
             compressionType: gzip
             autoCommitOffset: false #设置手动提交偏移
-        index-message-in:
-          group: torrent-index-group
-          destination: torrentMessages
-          contentType: application/json
-          consumer:
-            compressionType: gzip
-            autoCommitOffset: false #设置手动提交偏移
-  data:
-    elasticsearch:
-      cluster-nodes: 127.0.0.1:9300
-      repositories:
-        enabled: true
-      properties:
-        path:
-          logs: ./elasticsearch/log #elasticsearch日志存储目录
-          data: ./elasticsearch/data #elasticsearch数据存储目录
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    consumer:
+      auto-offset-reset: earliest
+  elasticsearch:
+    rest:
+      uris: 127.0.0.1:9200
 #  main:
 #    allow-bean-definition-overriding: true
 dubbo:
   protocol:
     name: dubbo
-    port: -1
+    port: 23456
   registry:
-    address: zookeeper://127.0.0.1:2181
+    address: N/A
   scan:
     base-packages: cc.dodder.torrent.store.api.impl
+store:
+  service:
+    version: 1.0.0
+dodder:
+  filter-sensitive-torrent: true  #开启过滤敏感资源
 logging:
   level:
     root: info

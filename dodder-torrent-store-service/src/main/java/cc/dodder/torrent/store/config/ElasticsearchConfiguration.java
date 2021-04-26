@@ -1,10 +1,12 @@
 package cc.dodder.torrent.store.config;
 
 import cc.dodder.common.entity.Torrent;
-import org.elasticsearch.client.Client;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
+import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfiguration;
+import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.data.elasticsearch.core.convert.ElasticsearchConverter;
 
 @Configuration
@@ -19,16 +21,13 @@ public class ElasticsearchConfiguration {
      * @return
      */
     @Bean
-    public ElasticsearchTemplate elasticsearchTemplate(Client client, ElasticsearchConverter converter) {
-        try {
-            ElasticsearchTemplate elasticsearchTemplate = new ElasticsearchTemplate(client, converter);
-            //手动创建索引
-            elasticsearchTemplate.createIndex(Torrent.class);
-            elasticsearchTemplate.putMapping(Torrent.class);
-            return elasticsearchTemplate;
+    public ElasticsearchRestTemplate elasticsearchRestTemplate(RestHighLevelClient client, ElasticsearchConverter converter) {
+        ElasticsearchRestTemplate elasticsearchRestTemplate = new ElasticsearchRestTemplate(client, converter);
+        IndexOperations ops = elasticsearchRestTemplate.indexOps(Torrent.class);
+        if (!ops.exists()) {
+            ops.create();
+            ops.putMapping(Torrent.class);
         }
-        catch (Exception ex) {
-            throw new IllegalStateException(ex);
-        }
+        return elasticsearchRestTemplate;
     }
 }

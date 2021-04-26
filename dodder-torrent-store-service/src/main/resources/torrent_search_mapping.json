@@ -1,22 +1,24 @@
 {
-  "torrent": {
-    "properties": {
-      "createDate": {
-        "type": "long"
-      },
-      "fileName": {
-        "type": "text",
-        "analyzer": "ik_max_word",
-        "search_analyzer": "ik_smart"
-      },
-      "fileSize": {
-        "type": "long"
-      },
-      "fileType": {
-        "type": "text",
-        "analyzer": "comma",
-        "search_analyzer": "comma"
-      }
+  "properties": {
+    "fileName": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "createDate": {
+      "type": "keyword"
+    },
+    "fileSize": {
+      "type": "long",
+      "index": false
+    },
+    "fileType": {
+      "type": "text",
+      "analyzer": "comma",
+      "search_analyzer": "comma"
+    },
+    "isXxx": {
+      "type": "keyword"
     }
   }
 }

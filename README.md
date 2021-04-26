@@ -8,15 +8,14 @@ _  /_/ // /_/ / /_/ / / /_/ / /  __/  /
 -------
 # 快速开始
 #### 环境依赖
-- Nacos-1.1.3 ([http://nacos.io](http://nacos.io))
-- Zookeeper-3.5.5 ([http://zookeeper.apache.org/](http://zookeeper.apache.org/))
-- Kafka-2.12-2.3.0 ([http://kafka.apache.org/](http://kafka.apache.org/))
+- Zookeeper-3.7.0 ([http://zookeeper.apache.org/](http://zookeeper.apache.org/))
+- Kafka-2.13-2.8.0 ([http://kafka.apache.org/](http://kafka.apache.org/))
 - Redis-2.6 ([https://redis.io/](https://redis.io/))
-- MongoDB-4.0.13 ([https://www.mongodb.com/](https://www.mongodb.com/))
-- Elasticsearch-7.3.2 ([https://www.elastic.co/](https://www.elastic.co/))
-- elasticsearch-analysis-ik-7.3.2 ([https://github.com/medcl/elasticsearch-analysis-ik](https://github.com/medcl/elasticsearch-analysis-ik))
+- MongoDB-4.4.5 ([https://www.mongodb.com/](https://www.mongodb.com/))
+- Elasticsearch-7.12.0 ([https://www.elastic.co/](https://www.elastic.co/))
+- elasticsearch-analysis-ik-7.12.0 ([https://github.com/medcl/elasticsearch-analysis-ik](https://github.com/medcl/elasticsearch-analysis-ik))
 #### 演示地址
-[https://dodder.cc](https://dodder.cc)
+[https://dodder.icu](https://dodder.icu)1
 
 announce_peer messages:
 ![announce_peer](https://github.com/xwlcn/img/raw/master/announce_peer.gif)
@@ -28,6 +27,13 @@ announce_peer messages:
 * Bandwidth:	Unmetered @ 1Gbps
 
 #### 更新日志
+* 2021-04-27
+  - 升级 Spring Boot 以及 Spring Cloud 版本
+  - 修改 kafka 消费端为批量消费
+  - 新增敏感词过滤功能
+  - 优化种子下载内存占用一直升高问题
+  - 优化 MongoDB 数据存储内容（内存占用是个大问题，以后考虑换 HBase）
+  - 合并 MongoDB 入库与 Elasticsearch 索引为同步方法，之前两个不同分组进行入库与索引可能造成先索引数据库中还没有数据的情况，以至于前端网页404问题
 * 2019-10-25
   - 升级目前部署在服务器上的 MongoDB，之前 3.6.8 版本频繁挂掉无错误日志
   - 使用 MongoDB 连接池

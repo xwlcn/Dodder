@@ -30,6 +30,10 @@ spring:
           contentType: application/json
           producer:
             compressionType: gzip
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    consumer:
+      auto-offset-reset: earliest
 logging:
   level:
     root: info

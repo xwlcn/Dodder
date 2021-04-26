@@ -28,6 +28,6 @@ public class AutoJoinDHT {
 			log.info("本地 DHT 节点数为0，自动重新加入 DHT 网络中...");
 			handler.joinDHT();
 		}
-		dhtServer.saveBloomFilter();
+		//dhtServer.saveBloomFilter();
 	}
 }

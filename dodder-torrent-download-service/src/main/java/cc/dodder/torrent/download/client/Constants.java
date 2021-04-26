@@ -16,10 +16,10 @@ public class Constants {
 	public static final int EXT_HANDSHAKE_ID = 0;
 	public static final int CONNECT_TIMEOUT = 5000;
 	public static final int READ_WRITE_TIMEOUT = 5000;
-	public static final int MAX_METADATA_SIZE = 1024 * 1024 * 50;        //最大 1M
+	public static final int MAX_METADATA_SIZE = 1024 * 1024 * 10;        //最大 10M
 
 	public static final byte[] PEER_ID = NodeIdUtil.createRandomNodeId();
 
-	public static final long MAX_LOSS_TIME = 30 * 60 * 1000;
+	public static final long MAX_LOSS_TIME = 10 * 60 * 1000;
 
 }

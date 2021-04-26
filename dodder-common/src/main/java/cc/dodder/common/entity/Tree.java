@@ -2,17 +2,21 @@ package cc.dodder.common.entity;
 
 
 import cc.dodder.common.util.FileTypeUtil;
+import cc.dodder.common.util.JSONUtil;
 import cc.dodder.common.util.StringUtil;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.data.annotation.Transient;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Tree {
 
 	private Node root;
 
-	@Transient
+	@JsonIgnore
 	private List<Node> leaves;
 	
 	public Tree() {
@@ -20,7 +24,7 @@ public class Tree {
 	}
 
 	public Tree(String text) {
-		root = new Node(0, -1, text, null, -1);
+		root = new Node(null, null, text, null, null);
 	}
 	
 	public void createTree(List<Node> nodes) {
@@ -40,6 +44,7 @@ public class Tree {
 	private Node findParent(Node node, int pid) {
 		Node result = null;
 		for (Node n : node.getChildren()) {
+			if (n.getNid() == null) return root;
 			if (n.getNid() == pid) {
 				return n;
 			} else {
@@ -65,7 +70,7 @@ public class Tree {
 	 * 构建叶子节点数组，实际上就是构建子文件列表
 	 * @return
 	 */
-	@Transient
+	@JsonIgnore
 	public List<Node> getLeafList() {
 		leaves = new ArrayList<>();
 		deep(root);
@@ -129,6 +134,4 @@ public class Tree {
 	public void setRoot(Node root) {
 		this.root = root;
 	}
-	
-	
 }

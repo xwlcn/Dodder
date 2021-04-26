@@ -3,11 +3,9 @@ package cc.dodder.torrent.download.client;
 import cc.dodder.common.entity.Node;
 import cc.dodder.common.entity.Torrent;
 import cc.dodder.common.entity.Tree;
-import cc.dodder.common.util.ByteUtil;
-import cc.dodder.common.util.ExtensionUtil;
-import cc.dodder.common.util.JSONUtil;
-import cc.dodder.common.util.StringUtil;
+import cc.dodder.common.util.*;
 import cc.dodder.common.util.bencode.BencodingUtils;
+import cc.dodder.torrent.download.TorrentDownloadServiceApplication;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -243,7 +241,6 @@ public class PeerWireClient {
 			torrent.setCreateDate(((BigInteger) map.get("creation date")).longValue());
 		else
 			torrent.setCreateDate(System.currentTimeMillis());
-
 		byte[] temp;
 		if (info.containsKey("name.utf-8")) {
 			temp = (byte[]) info.get("name.utf-8");
@@ -257,6 +254,12 @@ public class PeerWireClient {
 		}
 
 		torrent.setFileName(new String(temp, encoding));
+
+		if (TorrentDownloadServiceApplication.filterSensitiveWords) {
+			if (SensitiveWordsUtil.getInstance().containsAny(torrent.getFileName())) {
+				torrent.setIsXxx(1);    //标记敏感资源
+			}
+		}
 
 		//多文件
 		if (info.containsKey("files")) {
@@ -287,7 +290,7 @@ public class PeerWireClient {
 							types.add(type);
 						}
 					}
-					Node node = new Node(cur, j == 0 ? 0 : parent, sname, filesize, i);
+					Node node = new Node(cur, j == 0 ? null : parent, sname, filesize, i);
 					if (!nodes.contains(node)) {
 						nodes.add(node);
 						parent = cur;
@@ -438,6 +441,8 @@ public class PeerWireClient {
 				e.printStackTrace();
 			}
 		}
+		if (map != null)
+			map.clear();
 		metadata = null;
 	}
 

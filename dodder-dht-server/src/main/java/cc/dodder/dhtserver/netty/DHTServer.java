@@ -12,8 +12,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,20 +68,20 @@ public class DHTServer {
 		serverChannelFuture.channel().closeFuture();
 
 		//init bloom filter
-		bloomFilter = new BloomFilter(10000000);
+		/*bloomFilter = new BloomFilter(10000000);
 		String path = System.getProperty("java.class.path");
 		int firstIndex = path.lastIndexOf(System.getProperty("path.separator")) + 1;
 		int lastIndex = path.lastIndexOf(File.separator) + 1;
 		filterSavePath = path.substring(firstIndex, lastIndex) + "filter.data";
 		File file = new File(filterSavePath);
 		if (file.exists())
-			BloomFilter.readFilterFromFile(filterSavePath);
+			BloomFilter.readFilterFromFile(filterSavePath);*/
 	}
 
-	@PreDestroy
+	/*@PreDestroy
 	public void saveBloomFilter() {
 		bloomFilter.saveFilterToFile(filterSavePath);
-	}
+	}*/
 
 	/**
 	 * 发送 KRPC 协议数据报文

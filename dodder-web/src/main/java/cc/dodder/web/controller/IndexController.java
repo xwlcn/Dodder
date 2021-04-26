@@ -9,7 +9,9 @@ import cc.dodder.common.request.SearchRequest;
 import cc.dodder.common.util.JSONUtil;
 import cc.dodder.common.vo.TorrentPageVO;
 import cc.dodder.common.vo.TorrentVO;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.apache.dubbo.config.annotation.Reference;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,10 +19,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.Arrays;
 
+@EnableAutoConfiguration
 @Controller
 public class IndexController {
 
-	@Reference(check = false)
+	@DubboReference(timeout = 30000, version = "${store.service.version}", url = "${store.service.url}")
 	private TorrentApi torrentApi;
 
 	@RequestMapping("/")

@@ -7,6 +7,8 @@ import cc.dodder.common.request.SearchRequest;
 import cc.dodder.common.vo.TorrentPageVO;
 import cc.dodder.common.vo.TorrentVO;
 import cc.dodder.torrent.store.service.TorrentService;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.dubbo.config.annotation.DubboService;
 import org.apache.dubbo.config.annotation.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -15,7 +17,8 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.Optional;
 
-@Service
+@Slf4j
+@DubboService(version = "${store.service.version}")
 public class TorrentApiImpl implements TorrentApi {
 
 	@Autowired
@@ -56,4 +59,5 @@ public class TorrentApiImpl implements TorrentApi {
 		});
 		return result;
 	}
+
 }

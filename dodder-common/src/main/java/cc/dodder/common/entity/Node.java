@@ -1,18 +1,20 @@
 package cc.dodder.common.entity;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Node {
 
-	private int nid; // 父亲id
-	private int pid;
+	private Integer nid; // 父亲id
+	private Integer pid;
 	private String filename = "";
 	private Long filesize;
-	private int index;
+	private Integer index;
 
 	private List<Node> children;
 	
@@ -27,13 +29,13 @@ public class Node {
 
 	}
 
-	public Node(int nid, int pid) {
+	public Node(Integer nid, Integer pid) {
 		super();
 		this.nid = nid;
 		this.pid = pid;
 	}
-	
-	public Node(int nid, int pid, String filename, Long filesize, int index) {
+
+	public Node(Integer nid, Integer pid, String filename, Long filesize, Integer index) {
 		super();
 		this.nid = nid;
 		this.pid = pid;
@@ -44,8 +46,8 @@ public class Node {
 
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
+		final Integer prime = 31;
+		Integer result = 1;
 		result = prime * result + ((filename == null) ? 0 : filename.hashCode());
 		return result;
 	}
