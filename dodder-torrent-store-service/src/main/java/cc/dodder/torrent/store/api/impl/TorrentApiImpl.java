@@ -9,7 +9,6 @@ import cc.dodder.common.vo.TorrentVO;
 import cc.dodder.torrent.store.service.TorrentService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
-import org.apache.dubbo.config.annotation.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

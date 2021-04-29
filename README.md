@@ -15,7 +15,7 @@ _  /_/ // /_/ / /_/ / / /_/ / /  __/  /
 - Elasticsearch-7.12.0 ([https://www.elastic.co/](https://www.elastic.co/))
 - elasticsearch-analysis-ik-7.12.0 ([https://github.com/medcl/elasticsearch-analysis-ik](https://github.com/medcl/elasticsearch-analysis-ik))
 #### 演示地址
-[https://dodder.icu](https://dodder.icu)1
+[https://dodder.icu](https://dodder.icu)
 
 announce_peer messages:
 ![announce_peer](https://github.com/xwlcn/img/raw/master/announce_peer.gif)
@@ -27,6 +27,9 @@ announce_peer messages:
 * Bandwidth:	Unmetered @ 1Gbps
 
 #### 更新日志
+* 2021-04-29
+  - 降低 Spring Dubbo 版本（之前的可能导致内存泄露）
+  - 移除 KafkaTemplate 的使用，统一使用 Spring Cloud Stream 提供的 StreamBridge
 * 2021-04-27
   - 升级 Spring Boot 以及 Spring Cloud 版本
   - 修改 kafka 消费端为批量消费

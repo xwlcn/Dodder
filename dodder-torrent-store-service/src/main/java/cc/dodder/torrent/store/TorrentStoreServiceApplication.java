@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -33,8 +32,7 @@ public class TorrentStoreServiceApplication {
 
 
 	@Bean
-	@Transactional
-	public Consumer<Message<List<Torrent>>> handle() {
+	public Consumer<Message<List<Torrent>>> store() {
 		return message -> {
 			Acknowledgment acknowledgment = message.getHeaders().get(KafkaHeaders.ACKNOWLEDGMENT, Acknowledgment.class);
 			List<Torrent> torrents = message.getPayload();

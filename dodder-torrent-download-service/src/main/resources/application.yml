@@ -17,29 +17,26 @@ spring:
       kafka:
         binder:
           brokers: 127.0.0.1
+          auto-add-partitions: true
           min-partition-count: 1
+          configuration:
+            max.request.size: 2048576
       bindings:
-        handle-in-0:
-          group: torrent-download-group
-          destination: downloadMessages
+        download-in-0:
+          group: download-group
+          destination: download-topic
           contentType: application/json
           consumer:
-            max-poll-records: 500
+            max-poll-records: 3000
             batch-mode: true
             compressionType: gzip
-        handle-out-0:
-          destination: torrentMessages
+        download-out-0:
+          destination: store-topic
           contentType: application/json
           producer:
+            partitionCount: 1             # 大于等于 store service 集群数量
+            useNativeEncoding: true
             compressionType: gzip
-  kafka:
-    bootstrap-servers: 127.0.0.1:9092
-    consumer:
-      auto-offset-reset: earliest
-
-feign:
-  httpclient:
-    enabled: true
 
 management:
   endpoints:
@@ -49,5 +46,5 @@ management:
 
 download:
   num:
-    thread: 2500
+    thread: 3000
   enable-filter-sensitive-words: true     #是否开启过滤敏感词

@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 @Slf4j
 public class PeerWireClient {
 
-	private Map<String, Object> map;
+	private Map<String, Object> map = new HashMap<>();
 
 	private Socket socket;
 	private InputStream in;
@@ -39,7 +39,7 @@ public class PeerWireClient {
 	private int pieces;
 	private String hexHash;
 
-	private byte[] readBuff;
+	private byte[] readBuff = new byte[256];
 
 	private int nextSize;
 	private NextFunction next;
@@ -51,6 +51,9 @@ public class PeerWireClient {
 	private byte[] metadata;
 
 	private byte[] peerId;
+
+	private Set<String> types = new HashSet<>();
+	private List<Node> nodes = new ArrayList<>();
 
 	/**
 	 * 下载完成监听器
@@ -79,8 +82,6 @@ public class PeerWireClient {
 			setNext(1, onProtocolLen);
 			sendHandShake(infoHash);
 
-			map = new HashMap<>();
-			readBuff = new byte[256];
 			if (cachedBuff.get() == null) {
 				cachedBuff.set(new PipedStream());
 			}
@@ -263,13 +264,10 @@ public class PeerWireClient {
 
 		//多文件
 		if (info.containsKey("files")) {
-			Set<String> types = new HashSet<>();
-
 			List<Map<String, Object>> list = (List<Map<String, Object>>) info.get("files");
 
 			long total = 0;
 			int i = 0;
-			List<Node> nodes = new ArrayList<>();
 			int cur = 1, parent = 0;
 			for (Map<String, Object> f : list) {
 				long length = ((BigInteger) f.get("length")).longValue();
@@ -306,6 +304,7 @@ public class PeerWireClient {
 			tree.createTree(nodes);
 			torrent.setFileSize(total);
 			torrent.setFiles(JSONUtil.toJSONString(tree));
+			tree = null;
 			if (types.size() <= 0)
 				types.add("其他");
 			String sType = String.join(",", types);
@@ -419,6 +418,8 @@ public class PeerWireClient {
 	}
 
 	private void destroy() {
+		types.clear();
+		nodes.clear();
 		if (socket.isConnected()) {
 			try {
 				socket.close();

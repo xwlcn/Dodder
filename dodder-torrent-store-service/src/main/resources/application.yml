@@ -9,19 +9,15 @@ spring:
         binder:
           brokers: 127.0.0.1
       bindings:
-        handle-in-0:
-          group: torrent-store-group
-          destination: torrentMessages
+        store-in-0:
+          group: store-group
+          destination: store-topic
           contentType: application/json
           consumer:
             batch-mode: true
             max-poll-records: 500
             compressionType: gzip
             autoCommitOffset: false #设置手动提交偏移
-  kafka:
-    bootstrap-servers: 127.0.0.1:9092
-    consumer:
-      auto-offset-reset: earliest
   elasticsearch:
     rest:
       uris: 127.0.0.1:9200

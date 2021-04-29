@@ -23,17 +23,17 @@ spring:
       kafka:
         binder:
           brokers: 127.0.0.1
-          min-partition-count: 1      #主题分区个数，集群部署时请根据需求修改，分区数 >= download service 集群数量
+          auto-add-partitions: true
+          min-partition-count: 1
+          configuration:
+            max.request.size: 2048576
       bindings:
-        download-message-out:
-          destination: downloadMessages
-          contentType: application/json
+        download-out:
+          destination: download-topic
           producer:
+            partitionCount: 1             # 大于等于 download service 集群数量
+            useNativeEncoding: true
             compressionType: gzip
-  kafka:
-    bootstrap-servers: 127.0.0.1:9092
-    consumer:
-      auto-offset-reset: earliest
 logging:
   level:
     root: info

@@ -20,6 +20,6 @@ public class Constants {
 
 	public static final byte[] PEER_ID = NodeIdUtil.createRandomNodeId();
 
-	public static final long MAX_LOSS_TIME = 10 * 60 * 1000;
+	public static final long MAX_LOSS_TIME = 30 * 60 * 1000;
 
 }

@@ -1,20 +1,22 @@
 package cc.dodder.torrent.download;
 
 import cc.dodder.common.entity.DownloadMsgInfo;
+import cc.dodder.common.util.ByteUtil;
 import cc.dodder.common.util.SensitiveWordsUtil;
 import cc.dodder.common.util.SystemClock;
 import cc.dodder.torrent.download.client.Constants;
 import cc.dodder.torrent.download.task.BlockingExecutor;
 import cc.dodder.torrent.download.task.DownloadTask;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.PostConstruct;
@@ -33,6 +35,8 @@ public class TorrentDownloadServiceApplication {
 
 	@Value("${download.num.thread}")
 	private int nThreads;
+	@Autowired
+	private RedisTemplate redisTemplate;
 
 	private BlockingExecutor blockingExecutor;
 	public static Boolean filterSensitiveWords;
@@ -48,11 +52,13 @@ public class TorrentDownloadServiceApplication {
 	}
 
 	@Bean
-	public Consumer<List<DownloadMsgInfo>> handle() {
+	public Consumer<List<DownloadMsgInfo>> download() {
 		return list -> {
 			//submit to blocking executor
 			try {
 				for(DownloadMsgInfo msgInfo: list) {
+					if (redisTemplate.hasKey(ByteUtil.byteArrayToHex(msgInfo.getInfoHash())))
+						continue;
 					//由于下载线程消费的速度总是比 dht server 生产的速度慢，所以要做一下时间限制，否则程序越跑越慢
 					if (SystemClock.now() - msgInfo.getTimestamp() >= Constants.MAX_LOSS_TIME) {
 						continue;
