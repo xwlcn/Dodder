@@ -39,7 +39,7 @@ public class TorrentService {
 	}
 
 	public Page<Torrent> findSimilar(Torrent torrent, Pageable pageable) {
-		return torrentDao.searchSimilar(torrent, new String[] {"fileName"}, pageable);
+		return torrentDao.searchSimilar(torrent, new String[] {torrent.getFileName() != null ? "fileName" : "fileNameRu"}, pageable);
 	}
 	@Transactional
 	public void upsertAndIndex(List<Torrent> torrents) {

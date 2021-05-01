@@ -1,10 +1,10 @@
 package cc.dodder.torrent.download.task;
 
 import cc.dodder.common.entity.DownloadMsgInfo;
-import cc.dodder.common.util.ByteUtil;
 import cc.dodder.common.util.JSONUtil;
 import cc.dodder.torrent.download.client.PeerWireClient;
 import cc.dodder.torrent.download.util.SpringContextUtil;
+import lombok.SneakyThrows;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
@@ -19,21 +19,16 @@ import java.net.InetSocketAddress;
 public class DownloadTask implements Runnable {
 
 	private DownloadMsgInfo msgInfo;
-	private static ThreadLocal<StreamBridge> streamBridge = new ThreadLocal<>();
 	private static ThreadLocal<PeerWireClient> wireClient = new ThreadLocal<>();
 
 	public DownloadTask(DownloadMsgInfo msgInfo) {
 		this.msgInfo = msgInfo;
 	}
 
+	@SneakyThrows
 	@Override
 	public void run() {
-		StringRedisTemplate redisTemplate = (StringRedisTemplate) SpringContextUtil.getBean(StringRedisTemplate.class);
-		if (redisTemplate.hasKey(ByteUtil.byteArrayToHex(msgInfo.getInfoHash())))
-			return;
-		if (streamBridge.get() == null) {
-			streamBridge.set((StreamBridge) SpringContextUtil.getBean(StreamBridge.class));
-		}
+
 		if (wireClient.get() == null) {
 			wireClient.set(new PeerWireClient());
 			//设置下载完成监听器
@@ -41,10 +36,12 @@ public class DownloadTask implements Runnable {
 				if (torrent == null) {  //下载失败
 					return;
 				}
-				if (redisTemplate.hasKey(ByteUtil.byteArrayToHex(msgInfo.getInfoHash())))
+				StringRedisTemplate redisTemplate = (StringRedisTemplate) SpringContextUtil.getBean(StringRedisTemplate.class);
+				if (redisTemplate.hasKey(torrent.getInfoHash()))
 					return;
 				//丢进 kafka 消息队列进行入库及索引操作
-				streamBridge.get().send("download-out-0", JSONUtil.toJSONString(torrent).getBytes());
+				StreamBridge streamBridge = (StreamBridge) SpringContextUtil.getBean(StreamBridge.class);
+				streamBridge.send("download-out-0", JSONUtil.toJSONString(torrent).getBytes());
 				redisTemplate.opsForValue().set(torrent.getInfoHash(), "");
 			});
 		}

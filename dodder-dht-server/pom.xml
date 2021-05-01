@@ -16,6 +16,12 @@
             <groupId>cc.dodder</groupId>
             <artifactId>dodder-common</artifactId>
             <version>1.0-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.github.pemistahl</groupId>
+                    <artifactId>lingua</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -9,6 +9,33 @@
       "comma": {
         "type": "pattern",
         "pattern":","
+      },
+      "my_ik_smart": {
+        "type": "custom",
+        "tokenizer": "ik_smart",
+        "filter": [
+          "stemmer"
+        ],
+        "char_filter": [
+          "dot_char_filter"
+        ]
+      },
+      "my_ik_max_word": {
+        "type": "custom",
+        "tokenizer": "ik_max_word",
+        "filter": [
+          "stemmer"
+        ],
+        "char_filter": [
+          "dot_char_filter"
+        ]
+      }
+    },
+    "char_filter": {
+      "dot_char_filter": {
+        "type": "pattern_replace",
+        "pattern": "\\.",
+        "replacement": " "
       }
     }
   }

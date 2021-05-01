@@ -27,6 +27,8 @@ announce_peer messages:
 * Bandwidth:	Unmetered @ 1Gbps
 
 #### 更新日志
+* 2021-04-30
+  - 优化分词搜索功能
 * 2021-04-29
   - 降低 Spring Dubbo 版本（之前的可能导致内存泄露）
   - 移除 KafkaTemplate 的使用，统一使用 Spring Cloud Stream 提供的 StreamBridge

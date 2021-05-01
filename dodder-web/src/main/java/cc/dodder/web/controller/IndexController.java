@@ -54,6 +54,7 @@ public class IndexController {
 			tree.getRoot().setFilename(torrent.getFileName());
 			model.addAttribute("treeFiles", tree.getHtml(tree.getRoot()));
 		}
+
 		model.addAttribute("torrent", torrent);
 		model.addAttribute("similar", result.getData().getSimilar());
 		return "info";

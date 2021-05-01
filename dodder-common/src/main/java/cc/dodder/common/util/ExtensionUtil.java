@@ -60,8 +60,10 @@ public class ExtensionUtil {
 		EXT.put(".epub", "文档");
 		EXT.put(".bc!", "文档");
 		EXT.put(".doc", "文档");
+		EXT.put(".docx", "文档");
 		EXT.put(".ppt", "文档");
 		EXT.put(".xls", "文档");
+		EXT.put(".xlsx", "文档");
 
 		EXT.put(".rar", "压缩文件");
 		EXT.put(".zip", "压缩文件");
@@ -76,7 +78,7 @@ public class ExtensionUtil {
 		EXT.put(".app", "软件");
 		EXT.put(".msi", "软件");
 		EXT.put(".apk", "软件");
-
+		EXT.put(".dmg", "软件");
 	}
 
 	public static String getExtensionType(String name) {

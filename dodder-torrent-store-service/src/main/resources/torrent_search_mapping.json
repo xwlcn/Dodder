@@ -2,8 +2,13 @@
   "properties": {
     "fileName": {
       "type": "text",
-      "analyzer": "ik_max_word",
-      "search_analyzer": "ik_smart"
+      "analyzer": "my_ik_max_word",
+      "search_analyzer": "my_ik_smart"
+    },
+    "fileNameRu": {
+      "type": "text",
+      "analyzer": "stop",
+      "search_analyzer": "stop"
     },
     "createDate": {
       "type": "keyword"

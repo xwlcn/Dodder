@@ -29,8 +29,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.*;
 
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
-import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
+import static org.elasticsearch.index.query.QueryBuilders.*;
 import static org.elasticsearch.search.sort.SortBuilders.fieldSort;
 import static org.elasticsearch.search.sort.SortOrder.ASC;
 import static org.elasticsearch.search.sort.SortOrder.DESC;
@@ -55,7 +54,11 @@ public class TorrentDaoImpl implements TorrentDao {
         for (Torrent torrent: torrents) {
 
             Map<String, Object> map = new HashMap<>();
-            map.put("fileName", torrent.getFileName());
+            if (torrent.getFileName() != null)
+                map.put("fileName", torrent.getFileName());
+            if (torrent.getFileNameRu() != null) {
+                map.put("fileNameRu", torrent.getFileNameRu());
+            }
             map.put("createDate", torrent.getCreateDate());
             map.put("fileSize", torrent.getFileSize());
             map.put("fileType", torrent.getFileType());
@@ -74,9 +77,12 @@ public class TorrentDaoImpl implements TorrentDao {
         BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, Torrent.class);
         for (Torrent torrent: torrents) {
             Query query = Query.query(Criteria.where("infoHash").is(torrent.getInfoHash()));
+            String fileName = torrent.getFileName();
+            if (fileName == null)
+                fileName = torrent.getFileNameRu();
             Update update = new Update().set("infoHash", torrent.getInfoHash())
                     .set("createDate", torrent.getCreateDate())
-                    .set("fileName", torrent.getFileName())
+                    .set("fileName", fileName)
                     .set("files", torrent.getFiles())
                     .set("fileSize", torrent.getFileSize())
                     .set("fileType", torrent.getFileType())
@@ -93,12 +99,11 @@ public class TorrentDaoImpl implements TorrentDao {
 
     @Override
     public Page<Torrent> query(SearchRequest request, Pageable pageable) {
-        long now = System.currentTimeMillis();
         NativeSearchQueryBuilder query = new NativeSearchQueryBuilder();
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
 
         if (request.getFileName() != null) {
-            boolQuery.must(matchQuery("fileName", request.getFileName()));
+            boolQuery.must(multiMatchQuery(request.getFileName(), "fileName", "fileNameRu"));
         } else {
             boolQuery.must(matchAllQuery());
         }
@@ -119,16 +124,20 @@ public class TorrentDaoImpl implements TorrentDao {
 
         query.withPageable(pageable)
                 .withQuery(boolQuery)
-                .withHighlightFields(new HighlightBuilder.Field("fileName"));
+                .withHighlightFields(new HighlightBuilder.Field("fileName"), new HighlightBuilder.Field("fileNameRu"));
 
         SearchHits<Torrent> searchHits = elasticsearchRestTemplate.search(query.build(), Torrent.class);
+
         for (SearchHit<Torrent> hit: searchHits) {
             if (hit == null) continue;
             Torrent torrent = hit.getContent();
             if (hit.getHighlightFields().containsKey("fileName"))
                 torrent.setFileName(hit.getHighlightField("fileName").get(0));
+            if (hit.getHighlightFields().containsKey("fileNameRu"))
+                torrent.setFileName(hit.getHighlightField("fileNameRu").get(0));
+            if (torrent.getFileName() == null)
+                torrent.setFileName(torrent.getFileNameRu());
         }
-
         //fix totalElements
         AggregatedPage<SearchHit<Torrent>> page = new AggregatedPageImpl<>(
                 searchHits.getSearchHits(),
@@ -137,14 +146,13 @@ public class TorrentDaoImpl implements TorrentDao {
                 searchHits.getAggregations(),
                 null,
                 searchHits.getMaxScore());
-        System.out.println("====================================" + (System.currentTimeMillis() - now));
         return (Page<Torrent>) SearchHitSupport.unwrapSearchHits(page);
     }
 
     @Override
     public Page<Torrent> searchSimilar(Torrent torrent, String[] fields, Pageable pageable) {
         MoreLikeThisQueryBuilder moreLikeThisQueryBuilder = QueryBuilders.moreLikeThisQuery(fields,
-                new String[] {torrent.getFileName()},
+                new String[] {torrent.getFileName() != null ? torrent.getFileName() : torrent.getFileNameRu()},
                 new MoreLikeThisQueryBuilder.Item[] {new MoreLikeThisQueryBuilder.Item("torrent", torrent.getInfoHash())});
         moreLikeThisQueryBuilder.minTermFreq(1);
         SearchHits<Torrent> searchHits = elasticsearchRestTemplate.search(new NativeSearchQueryBuilder()
@@ -161,7 +169,7 @@ public class TorrentDaoImpl implements TorrentDao {
 
     @Override
     public Long countAll() {
-        return mongoTemplate.count(new Query(), Torrent.class);
+        return mongoTemplate.estimatedCount(Torrent.class);
     }
 
 }

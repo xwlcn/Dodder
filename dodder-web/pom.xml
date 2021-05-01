@@ -53,6 +53,12 @@
             <artifactId>dodder-common</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.github.pemistahl</groupId>
+                    <artifactId>lingua</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 

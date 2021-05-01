@@ -6,6 +6,7 @@ import cc.dodder.common.entity.Tree;
 import cc.dodder.common.util.*;
 import cc.dodder.common.util.bencode.BencodingUtils;
 import cc.dodder.torrent.download.TorrentDownloadServiceApplication;
+import com.github.pemistahl.lingua.api.Language;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -14,7 +15,6 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -46,7 +46,7 @@ public class PeerWireClient {
 
 	private Torrent torrent;
 
-	private static ThreadLocal<PipedStream> cachedBuff = new ThreadLocal<>();
+	private PipedStream cachedBuff;
 
 	private byte[] metadata;
 
@@ -54,6 +54,10 @@ public class PeerWireClient {
 
 	private Set<String> types = new HashSet<>();
 	private List<Node> nodes = new ArrayList<>();
+
+	public PeerWireClient() throws IOException {
+		cachedBuff = new PipedStream();
+	}
 
 	/**
 	 * 下载完成监听器
@@ -82,13 +86,9 @@ public class PeerWireClient {
 			setNext(1, onProtocolLen);
 			sendHandShake(infoHash);
 
-			if (cachedBuff.get() == null) {
-				cachedBuff.set(new PipedStream());
-			}
-
 			int len = -1;
 			while (!socket.isClosed() && (len = in.read(readBuff)) != -1) {
-				cachedBuff.get().write(readBuff, 0, len);
+				cachedBuff.write(readBuff, 0, len);
 				handleMessage();
 			}
 		} catch (Exception e) {
@@ -119,9 +119,9 @@ public class PeerWireClient {
 	}
 
 	private void handleMessage() throws Exception {
-		while (cachedBuff.get().available() >= nextSize) {
+		while (cachedBuff.available() >= nextSize) {
 			byte[] buff = new byte[nextSize];
-			cachedBuff.get().read(buff, 0, nextSize);
+			cachedBuff.read(buff, 0, nextSize);
 			next.doNext(buff);
 		}
 	}
@@ -144,11 +144,16 @@ public class PeerWireClient {
 	}
 
 	private void resolvePiece(byte[] buff) {
-		String str = new String(buff, StandardCharsets.ISO_8859_1);
-		int pos = str.indexOf("ee") + 2;
+		int pos = 1;
+		for (; pos < buff.length; pos ++) {
+			if (buff[pos - 1] == 'e' && buff[pos] == 'e') {
+				break;
+			}
+		}
+		if (++pos > buff.length - 1) return;
 		byte[] piece_metadata = Arrays.copyOfRange(buff, pos, buff.length);
 
-		Map map = BencodingUtils.decode(str.substring(0, pos).getBytes(StandardCharsets.ISO_8859_1));
+		Map map = BencodingUtils.decode(Arrays.copyOfRange(buff, 0, pos));
 
 		int piece = ((BigInteger) map.get("piece")).intValue();
 		System.arraycopy(piece_metadata, 0, this.metadata, piece * 16 * 1024, piece_metadata.length);
@@ -251,13 +256,20 @@ public class PeerWireClient {
 			temp = (byte[]) info.get("name");
 			if (encoding == null) {
 				encoding = StringUtil.getEncoding(temp);
+				if ("GB18030".equals(encoding))		//貌似识别错误
+					encoding = "UTF-8";
 			}
 		}
 
-		torrent.setFileName(new String(temp, encoding));
+		String fn = new String(temp, encoding);
 
+		if (LanguageUtil.getLanguage(fn) == Language.RUSSIAN) {
+			torrent.setFileNameRu(fn);
+		} else {
+			torrent.setFileName(fn);
+		}
 		if (TorrentDownloadServiceApplication.filterSensitiveWords) {
-			if (SensitiveWordsUtil.getInstance().containsAny(torrent.getFileName())) {
+			if (SensitiveWordsUtil.getInstance().containsAny(fn)) {
 				torrent.setIsXxx(1);    //标记敏感资源
 			}
 		}
@@ -295,7 +307,9 @@ public class PeerWireClient {
 					} else {
 						parent = nodes.get(nodes.indexOf(node)).getNid();
 					}
-					cur++;
+					if (cur++ > 1000) {		//文件过多，直接丢掉，目前发现最多的高达将近3万的文件，直接造成web端Dubbo序列化后无法释放，最终内存泄露
+						return null;
+					}
 					j++;
 				}
 				i++;
@@ -434,12 +448,11 @@ public class PeerWireClient {
 			out.close();
 		} catch (Exception e) {
 		}
-		readBuff = null;
-		if (cachedBuff.get() != null) {
+
+		if (cachedBuff != null) {
 			try {
-				cachedBuff.get().clear();
+				cachedBuff.clear();
 			} catch (IOException e) {
-				e.printStackTrace();
 			}
 		}
 		if (map != null)

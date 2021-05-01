@@ -24,6 +24,9 @@ public class Torrent implements Serializable {
     private String infoHash;
     private String fileType = "其他";
     private String fileName;
+    //IK分词器对于俄语根本解析不了，单独分离出来
+    //其他语言虽然没有专门的分词器准，但至少能够分词，将就着用，如有需要，自行增加额外字段，并且对种子文件名进行语言检测
+    private String fileNameRu;
     private long fileSize;
 
     private long createDate;
@@ -35,10 +38,11 @@ public class Torrent implements Serializable {
     public Torrent() {
     }
 
-    public Torrent(String infoHash, String fileType, String fileName, long fileSize, long createDate, String files, Integer isXXX) {
+    public Torrent(String infoHash, String fileType, String fileName, String fileNameRu, long fileSize, long createDate, String files, Integer isXXX) {
         this.infoHash = infoHash;
         this.fileType = fileType;
         this.fileName = fileName;
+        this.fileNameRu = fileNameRu;
         this.fileSize = fileSize;
         this.createDate = createDate;
         this.files = files;

@@ -20,7 +20,7 @@ spring:
           auto-add-partitions: true
           min-partition-count: 1
           configuration:
-            max.request.size: 2048576
+            max.request.size: 12048576
       bindings:
         download-in-0:
           group: download-group
