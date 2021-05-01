@@ -10,6 +10,15 @@
         "type": "pattern",
         "pattern":","
       },
+      "rebuilt_russian": {
+        "tokenizer":  "standard",
+        "filter": [
+          "lowercase",
+          "russian_stop",
+          "russian_keywords",
+          "russian_stemmer"
+        ]
+      },
       "my_ik_smart": {
         "type": "custom",
         "tokenizer": "ik_smart",
@@ -36,6 +45,20 @@
         "type": "pattern_replace",
         "pattern": "\\.",
         "replacement": " "
+      }
+    },
+    "filter": {
+      "russian_stop": {
+        "type":       "stop",
+        "stopwords":  "_russian_"
+      },
+      "russian_keywords": {
+        "type":       "keyword_marker",
+        "keywords":   ["пример"]
+      },
+      "russian_stemmer": {
+        "type":       "stemmer",
+        "language":   "russian"
       }
     }
   }
