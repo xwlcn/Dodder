@@ -36,7 +36,8 @@
                             th:href="${'magnet:?xt=urn:btih:' + torrent.infoHash}"
                             th:text="${'magnet:?xt=urn:btih:' + torrent.infoHash}"></a></p>
                     <hr class="layui-bg-red">
-                    <div class="layui-anim layui-anim-up dodder-torrent-info" th:utext="${treeFiles}"></div>
+                    <b>敏感词汇已用“*”代替</b>
+                    <div class="layui-anim layui-anim-up dodder-torrent-info" th:utext="${#dodderUtil.replaceSensitiveWords(treeFiles)}"></div>
                     <blockquote class="layui-elem-quote" th:unless="${#lists.isEmpty(similar)}">相关推荐</blockquote>
                     <ul class="layui-timeline">
                         <li class="layui-timeline-item" th:each="t : ${similar}">

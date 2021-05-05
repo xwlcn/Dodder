@@ -152,12 +152,13 @@ public class TorrentDaoImpl implements TorrentDao {
     @Override
     public Page<Torrent> searchSimilar(Torrent torrent, String[] fields, Pageable pageable) {
         MoreLikeThisQueryBuilder moreLikeThisQueryBuilder = QueryBuilders.moreLikeThisQuery(fields,
-                new String[] {torrent.getFileName() != null ? torrent.getFileName() : torrent.getFileNameRu()},
+                new String[] {torrent.getFileName()},
                 new MoreLikeThisQueryBuilder.Item[] {new MoreLikeThisQueryBuilder.Item("torrent", torrent.getInfoHash())});
         moreLikeThisQueryBuilder.minTermFreq(1);
         SearchHits<Torrent> searchHits = elasticsearchRestTemplate.search(new NativeSearchQueryBuilder()
                 .withPageable(pageable)
                 .withQuery(moreLikeThisQueryBuilder).build(), Torrent.class);
+        searchHits.stream().filter(hit -> hit.getContent().getFileNameRu() != null).forEach(hit -> hit.getContent().setFileName(hit.getContent().getFileNameRu()));
         AggregatedPage<SearchHit<Torrent>> page = SearchHitSupport.page(searchHits, pageable);
         return (Page<Torrent>) SearchHitSupport.unwrapSearchHits(page);
     }

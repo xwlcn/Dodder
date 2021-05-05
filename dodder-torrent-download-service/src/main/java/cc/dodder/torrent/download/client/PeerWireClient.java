@@ -6,8 +6,10 @@ import cc.dodder.common.entity.Tree;
 import cc.dodder.common.util.*;
 import cc.dodder.common.util.bencode.BencodingUtils;
 import cc.dodder.torrent.download.TorrentDownloadServiceApplication;
+import cc.dodder.torrent.download.util.SpringContextUtil;
 import com.github.pemistahl.lingua.api.Language;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,6 +17,7 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -25,7 +28,6 @@ import java.util.function.Consumer;
  * @author: Mr.Xu
  * @create: 2019-02-19 09:21
  **/
-@Slf4j
 public class PeerWireClient {
 
 	private Map<String, Object> map = new HashMap<>();
@@ -37,6 +39,7 @@ public class PeerWireClient {
 	private int ut_metadata;        //extended message ID
 	private int metadata_size;
 	private int pieces;
+	private int piece = 0;
 	private String hexHash;
 
 	private byte[] readBuff = new byte[256];
@@ -93,9 +96,12 @@ public class PeerWireClient {
 			}
 		} catch (Exception e) {
 		} finally {
+			try {
+				if (onFinishedListener != null && torrent != null) {
+					onFinishedListener.accept(torrent);
+				}
+			} catch (Exception ignored) {}
 			destroy();
-			if (onFinishedListener != null)
-				onFinishedListener.accept(torrent);
 		}
 	}
 
@@ -143,9 +149,10 @@ public class PeerWireClient {
 			resolvePiece(buf);
 	}
 
-	private void resolvePiece(byte[] buff) {
+	private void resolvePiece(byte[] buff) throws Exception {
+
 		int pos = 1;
-		for (; pos < buff.length; pos ++) {
+		for (; pos < buff.length; pos++) {
 			if (buff[pos - 1] == 'e' && buff[pos] == 'e') {
 				break;
 			}
@@ -153,25 +160,50 @@ public class PeerWireClient {
 		if (++pos > buff.length - 1) return;
 		byte[] piece_metadata = Arrays.copyOfRange(buff, pos, buff.length);
 
-		Map map = BencodingUtils.decode(Arrays.copyOfRange(buff, 0, pos));
+		if ((piece + 1) * piece_metadata.length > 1024 * 1024 || (piece + 1) * piece_metadata.length > this.metadata_size) {
+			destroy();
+			return;
+		}
 
-		int piece = ((BigInteger) map.get("piece")).intValue();
-		System.arraycopy(piece_metadata, 0, this.metadata, piece * 16 * 1024, piece_metadata.length);
+		String pm = new String(piece_metadata, StandardCharsets.ISO_8859_1);
+		int piecesPos = pm.indexOf("6:pieces");
+		if (piecesPos > 0) {    //useless data
+			System.arraycopy(piece_metadata, 0, this.metadata, piece * 16 * 1024, piecesPos);
+			metadata[piece * 16 * 1024 + piecesPos] = 'e';
+			metadata = Arrays.copyOf(metadata, piece * 16 * 1024 + piecesPos + 1);
+			pieces = -1;
+			piece = 0;
+		} else {
+			System.arraycopy(piece_metadata, 0, this.metadata, piece * 16 * 1024, piece_metadata.length);
+		}
 
 		pieces--;
-
+		piece++;
 		checkFinished();
+		if (pieces > 0)
+			requestPiece(piece);
 	}
 
-	private void checkFinished() {
+	private void checkFinished() throws Exception {
 		if (pieces <= 0) {
-			try {
-				if (metadata[0] == 'd') {
-					Map map = BencodingUtils.decode(metadata);
-					if (map != null)
-						torrent = parseTorrent(map);
+			Map map = BencodingUtils.decode(metadata);
+			metadata = null;
+			if (map != null) {
+				torrent = parseTorrent(map);
+				if (torrent != null) {
+					CRC64 crc = new CRC64();
+					crc.reset();
+					crc.update(torrent.getInfoHash().getBytes(StandardCharsets.ISO_8859_1));
+					String hexCrc = Long.toHexString(crc.getValue());
+					StringRedisTemplate redisTemplate = (StringRedisTemplate) SpringContextUtil.getBean(StringRedisTemplate.class);
+					if (!redisTemplate.hasKey(hexCrc)) {
+						//丢进 kafka 消息队列进行入库及索引操作
+						StreamBridge streamBridge = (StreamBridge) SpringContextUtil.getBean(StreamBridge.class);
+						streamBridge.send("download-out-0", JSONUtil.toJSONString(torrent).getBytes());
+						redisTemplate.opsForValue().set(hexCrc, "");
+					}
+					torrent = null;
 				}
-			} catch (Exception e) {
 			}
 			destroy();
 		}
@@ -229,7 +261,8 @@ public class PeerWireClient {
 	 * @return java.util.Optional<cc.dodder.common.entity.Torrent>
 	 */
 	private Torrent parseTorrent(Map map) throws Exception {
-		String encoding = null;
+
+		String encoding = "UTF-8";
 		Map<String, Object> info;
 		if (map.containsKey("info"))
 			info = (Map<String, Object>) map.get("info");
@@ -255,14 +288,12 @@ public class PeerWireClient {
 		else {
 			temp = (byte[]) info.get("name");
 			if (encoding == null) {
-				encoding = StringUtil.getEncoding(temp);
-				if ("GB18030".equals(encoding))		//貌似识别错误
-					encoding = "UTF-8";
+				encoding = "UTF-8";
 			}
 		}
 
 		String fn = new String(temp, encoding);
-
+		torrent.setFileName(fn);
 		if (LanguageUtil.getLanguage(fn) == Language.RUSSIAN) {
 			torrent.setFileNameRu(fn);
 		} else {
@@ -287,12 +318,14 @@ public class PeerWireClient {
 
 				Long filesize = null;     //null 表示为文件夹
 				boolean uft8 = f.containsKey("path.utf-8");
-				List<byte[]> aList = f.containsKey("path.utf-8") ? (List<byte[]>) f.get("path.utf-8") : (List<byte[]>) f.get("path");
+				List<byte[]> aList = uft8 ? (List<byte[]>) f.get("path.utf-8") : (List<byte[]>) f.get("path");
 				int j = 0;
 				for (byte[] bytes : aList) {
-					String sname = new String(bytes, uft8 ? "UTF-8" : StringUtil.getEncoding(bytes));
-					if (sname.contains("_____padding_file_"))
+					String sname = new String(bytes, encoding);
+					if (sname.contains("_____padding_file_")) {
+						j++;
 						continue;
+					}
 					if (j == aList.size() - 1) {
 						filesize = length;
 						String type = ExtensionUtil.getExtensionType(sname);
@@ -308,16 +341,21 @@ public class PeerWireClient {
 						parent = nodes.get(nodes.indexOf(node)).getNid();
 					}
 					if (cur++ > 1000) {		//文件过多，直接丢掉，目前发现最多的高达将近3万的文件，直接造成web端Dubbo序列化后无法释放，最终内存泄露
+						info.clear();
 						return null;
 					}
 					j++;
 				}
 				i++;
+				aList.clear();
+				f.clear();
 			}
+			list.clear();
 			Tree tree = new Tree(null);
 			tree.createTree(nodes);
 			torrent.setFileSize(total);
 			torrent.setFiles(JSONUtil.toJSONString(tree));
+			nodes.clear();
 			tree = null;
 			if (types.size() <= 0)
 				types.add("其他");
@@ -333,6 +371,8 @@ public class PeerWireClient {
 				torrent.setFileType(type);
 			}
 		}
+		info.clear();
+		map.clear();
 		torrent.setInfoHash(hexHash);
 		return torrent;
 	}
@@ -352,20 +392,17 @@ public class PeerWireClient {
 			destroy();
 			return;
 		}
-
 		requestPieces();
 	}
 
 	private void requestPieces() throws Exception {
-
-		metadata = new byte[this.metadata_size];
+		int len = Math.min(this.metadata_size, 1024 * 1024);
+		metadata = new byte[len];
 
 		pieces = (int) Math.ceil(this.metadata_size / (16.0 * 1024));
 
-		int temp = pieces;
-		for (int piece = 0; piece < temp; piece++) {
-			requestPiece(piece);
-		}
+		requestPiece(0);
+
 	}
 
 	private void requestPiece(int piece) throws Exception {
@@ -432,6 +469,7 @@ public class PeerWireClient {
 	}
 
 	private void destroy() {
+		torrent = null;
 		types.clear();
 		nodes.clear();
 		if (socket.isConnected()) {
@@ -441,14 +479,17 @@ public class PeerWireClient {
 			}
 		}
 		try {
-			in.close();
+			if (in != null)
+				in.close();
 		} catch (Exception e) {
 		}
 		try {
-			out.close();
+			if (out != null)
+				out.close();
 		} catch (Exception e) {
 		}
-
+		metadata = null;
+		piece = 0;
 		if (cachedBuff != null) {
 			try {
 				cachedBuff.clear();
@@ -457,7 +498,6 @@ public class PeerWireClient {
 		}
 		if (map != null)
 			map.clear();
-		metadata = null;
 	}
 
 

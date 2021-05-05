@@ -43,7 +43,7 @@
     "char_filter": {
       "dot_char_filter": {
         "type": "pattern_replace",
-        "pattern": "\\.",
+        "pattern": "\\.|-",
         "replacement": " "
       }
     },

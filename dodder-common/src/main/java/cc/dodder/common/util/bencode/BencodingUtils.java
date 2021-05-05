@@ -2,6 +2,8 @@ package cc.dodder.common.util.bencode;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.util.Map;
 
 public class BencodingUtils {
@@ -31,6 +33,15 @@ public class BencodingUtils {
 			return bencode.readMap();
 		} catch (Exception e) {
 			return null;
+		}
+	}
+
+	public static void main(String[] args) {
+		try (FileInputStream stream = new FileInputStream(new File("E:\\web\\img1\\53.torrent"));
+			 BencodingInputStream bencode = new BencodingInputStream(stream, "UTF-8", true)) {
+			Map map = bencode.readMap();
+			System.out.println();
+		} catch (Exception e) {
 		}
 	}
 }

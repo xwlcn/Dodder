@@ -13,7 +13,7 @@ public class BencodingInputStream extends FilterInputStream implements DataInput
 	private final boolean decodeAsString;
 
 	public BencodingInputStream(InputStream var1) {
-		this(var1, "UTF-8", false);
+		this(var1, "ISO-8859-1", false);
 	}
 
 	public BencodingInputStream(InputStream var1, String var2) {
@@ -21,7 +21,7 @@ public class BencodingInputStream extends FilterInputStream implements DataInput
 	}
 
 	public BencodingInputStream(InputStream var1, boolean var2) {
-		this(var1, "UTF-8", var2);
+		this(var1, "ISO-8859-1", var2);
 	}
 
 	public BencodingInputStream(InputStream var1, String var2, boolean var3) {
@@ -228,6 +228,7 @@ public class BencodingInputStream extends FilterInputStream implements DataInput
 
 			String var3 = new String(this.readBytes(var5), this.encoding);
 			Object var4 = this.readObject();
+			if ("pieces".equals(var3)) continue;
 			var1.put(var3, var4);
 		}
 

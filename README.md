@@ -27,6 +27,13 @@ announce_peer messages:
 * Bandwidth:	Unmetered @ 1Gbps
 
 #### 更新日志
+* 2021-05-06
+  - 优化种子下载服务内存：丢弃协议 pieces 内容，bencode 不存储 pieces 内容
+  - web 改用 tomcat 容器，目前版本对应的 undertow 搭配 Dubbo 使用存在内存泄露
+  - 修复某些文件名乱码问题
+  - 使用 CRC64 作为 redis key 去重
+  - 新增或删除某些中文敏感词汇
+  - 修复俄文资源无相关推荐问题
 * 2021-04-30
   - 优化分词搜索功能
 * 2021-04-29

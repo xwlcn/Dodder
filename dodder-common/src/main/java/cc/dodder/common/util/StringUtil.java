@@ -205,4 +205,8 @@ public class StringUtil {
 		return tree.getLeafList();
 	}
 
+	public static String replaceSensitiveWords(String text) {
+		return SensitiveWordsUtil.getInstance().replace(text);
+	}
+
 }

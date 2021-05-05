@@ -1,7 +1,7 @@
 package cc.dodder.dhtserver.netty.handler;
 
 import cc.dodder.common.entity.DownloadMsgInfo;
-import cc.dodder.common.util.ByteUtil;
+import cc.dodder.common.util.CRC64;
 import cc.dodder.common.util.JSONUtil;
 import cc.dodder.common.util.NodeIdUtil;
 import cc.dodder.common.util.bencode.BencodingUtils;
@@ -191,8 +191,12 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		args.get().put("id", nodeId);
 		DatagramPacket packet = createPacket(t, "r", args.get(), sender);
 		dhtServer.sendKRPC(packet);
-		//check exists, if exists then add to bloom filter
-		if (redisTemplate.hasKey(ByteUtil.byteArrayToHex(info_hash)) ) {
+
+		CRC64 crc = new CRC64();
+		crc.reset();
+		crc.update(info_hash);
+		//check exists
+		if (redisTemplate.hasKey(Long.toHexString(crc.getValue()))) {
 			return;
 		}
 		//log.error("info_hash[AnnouncePeer] : {}:{} - {}", sender.getHostString(), port, ByteUtil.byteArrayToHex(info_hash));
