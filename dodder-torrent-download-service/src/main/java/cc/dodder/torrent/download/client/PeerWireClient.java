@@ -42,7 +42,7 @@ public class PeerWireClient {
 	private int piece = 0;
 	private String hexHash;
 
-	private byte[] readBuff = new byte[256];
+	private byte[] readBuff = new byte[16384];
 
 	private int nextSize;
 	private NextFunction next;
@@ -54,6 +54,7 @@ public class PeerWireClient {
 	private byte[] metadata;
 
 	private byte[] peerId;
+	private byte[] infoHash;
 
 	private Set<String> types = new HashSet<>();
 	private List<Node> nodes = new ArrayList<>();
@@ -74,6 +75,7 @@ public class PeerWireClient {
 
 	public void downloadMetadata(InetSocketAddress address, byte[] peerId, byte[] infoHash) {
 		this.peerId = peerId;
+		this.infoHash = infoHash;
 		hexHash = ByteUtil.byteArrayToHex(infoHash);
 		socket = new Socket();
 		try {
@@ -160,7 +162,7 @@ public class PeerWireClient {
 		if (++pos > buff.length - 1) return;
 		byte[] piece_metadata = Arrays.copyOfRange(buff, pos, buff.length);
 
-		if ((piece + 1) * piece_metadata.length > 1024 * 1024 || (piece + 1) * piece_metadata.length > this.metadata_size) {
+		if ((piece + 1) * piece_metadata.length > 1024 * 1024) {
 			destroy();
 			return;
 		}
@@ -193,7 +195,7 @@ public class PeerWireClient {
 				if (torrent != null) {
 					CRC64 crc = new CRC64();
 					crc.reset();
-					crc.update(torrent.getInfoHash().getBytes(StandardCharsets.ISO_8859_1));
+					crc.update(infoHash);
 					String hexCrc = Long.toHexString(crc.getValue());
 					StringRedisTemplate redisTemplate = (StringRedisTemplate) SpringContextUtil.getBean(StringRedisTemplate.class);
 					if (!redisTemplate.hasKey(hexCrc)) {
