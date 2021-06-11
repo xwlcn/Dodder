@@ -50,11 +50,10 @@ public interface TorrentDao {
 	 * 相关推荐搜索
 	 *
 	 * @param torrent
-	 * @param fields
 	 * @param pageable
 	 * @return org.springframework.data.domain.Page<cc.dodder.common.entity.Torrent>
 	 */
-	Page<Torrent> searchSimilar(Torrent torrent, String[] fields, Pageable pageable);
+	Page<Torrent> searchSimilar(Torrent torrent, Pageable pageable);
 
 	boolean existsById(String infoHash);
 

@@ -8,35 +8,19 @@ public class ByteUtil {
 
 	/**
 	 * byte数组转16进制字符串
-	 * @param bytes	待转换byte数组
+	 * @param ba	待转换byte数组
 	 * @return		16进制字符串
 	 */
-	public static String byteArrayToHex(byte[] bytes) {
-		return byteArrayToHex(bytes, false);
-	}
-
-
-	/**
-	 * byte数组转16进制字符串
-	 * @param bytes	待转换byte数组
-	 * @param is
-	 * @return		16进制字符串
-	 */
-	public static String byteArrayToHex(byte[] bytes, boolean is) {
-		if (bytes == null || bytes.length == 0) {
-			return null;
+	public static String byteArrayToHex(byte[] ba) {
+		StringBuilder sbuf = new StringBuilder();
+		for (byte b : ba) {
+			String s = Integer.toHexString((int) (b & 0xff));
+			if (s.length() == 1) {
+				sbuf.append('0');
+			}
+			sbuf.append(s);
 		}
-
-		StringBuffer sb = new StringBuffer(bytes.length * 2);
-		String hexNumber;
-		for (int x = 0; x < bytes.length; x++) {
-			hexNumber = "0" + Integer.toHexString(0xff & bytes[x]);
-
-			if (is)
-				sb.append("%");
-			sb.append(hexNumber.substring(hexNumber.length() - 2));
-		}
-		return sb.toString();
+		return sbuf.toString();
 	}
 
 	public static byte[] hexStringToBytes(String hexString) {

@@ -3,10 +3,7 @@ package cc.dodder.common.util.bencode;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 public class BencodingInputStream extends FilterInputStream implements DataInput {
 	private final String encoding;
@@ -80,19 +77,18 @@ public class BencodingInputStream extends FilterInputStream implements DataInput
 	}
 
 	private byte[] readBytes(int var1) throws IOException {
-		StringBuilder var2 = new StringBuilder();
-		var2.append((char)var1);
+		int var2 = (char)var1 - 48;
 
 		while((var1 = this.read()) != 58) {
 			if (var1 == -1) {
 				throw new EOFException();
 			}
 
-			var2.append((char)var1);
+			var2 = var2*10 + (char)var1 - 48;
 		}
-
-		int var3 = Integer.parseInt(var2.toString());
-		byte[] var4 = new byte[var3];
+		if (var2 < 0 || var2 > 2048)
+			throw new EOFException();
+		byte[] var4  = new byte[var2];
 		this.readFully(var4);
 		return var4;
 	}
@@ -217,14 +213,10 @@ public class BencodingInputStream extends FilterInputStream implements DataInput
 	}
 
 	private Map<String, ?> readMap0() throws IOException {
-		TreeMap var1 = new TreeMap();
-		boolean var2 = true;
+		HashMap var1 = new HashMap();
 
 		int var5;
-		while((var5 = this.read()) != 101) {
-			if (var5 == -1) {
-				throw new EOFException();
-			}
+		while(this.available() > 0 && (var5 = this.read()) != 101 && var5 != -1) {
 
 			String var3 = new String(this.readBytes(var5), this.encoding);
 			Object var4 = this.readObject();

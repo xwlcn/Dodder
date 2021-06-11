@@ -21,9 +21,9 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,22 +54,34 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	}
 
 	@Override
+	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+		super.exceptionCaught(ctx, cause);
+		cause.printStackTrace();
+	}
+
+	@Override
 	protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) {
 
 		byte[] buff = new byte[packet.content().readableBytes()];
 		packet.content().readBytes(buff);
 		ctx.executor().execute(() -> {
-			Map<String, ?> map = BencodingUtils.decode(buff);
+			try {
+				Map<String, ?> msg = BencodingUtils.decode(buff);
 
-			if (map == null || map.get("y") == null)
-				return;
+				if (msg == null || msg.get("y") == null)
+					return;
 
-			byte[] y = (byte[]) map.get("y");
+				byte[] y = (byte[]) msg.get("y");
 
-			if (y.length > 0 && y[0] == 'q') {            //请求 Queries
-				onQuery(map, packet.sender());
-			} else if (y.length > 0 && y[0] == 'r') {     //回复 Responses
-				onResponse(map, packet.sender());
+				if (y.length > 0 && y[0] == 'q') {            //请求 Queries
+					onQuery(msg, packet.sender());
+				} else if (y.length > 0 && y[0] == 'r') {     //回复 Responses
+					onResponse(msg, packet.sender());
+				}
+			} catch (Exception e) {
+				System.out.println(JSONUtil.toJSONString(msg));
+				System.out.println(new String(buff));
+				e.printStackTrace();
 			}
 		});
 	}
@@ -98,7 +110,8 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 				responsePing(t, (byte[]) a.get("id"), sender);
 				break;
 			case "find_node"://find_node Query = {"t":"aa", "y":"q", "q":"find_node", "a": {"id":"abcdefghij0123456789", "target":"mnopqrstuvwxyz123456"}}
-				responseFindNode(t, (byte[]) a.get("id"), sender);
+				if (a != null)
+					responseFindNode(t, (byte[]) a.get("id"), sender);
 				break;
 			case "get_peers"://get_peers Query = {"t":"aa", "y":"q", "q":"get_peers", "a": {"id":"abcdefghij0123456789", "info_hash":"mnopqrstuvwxyz123456"}}
 				responseGetPeers(t, (byte[]) a.get("info_hash"), sender);
@@ -146,10 +159,7 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	 * @param sender
 	 */
 	private void responseGetPeers(byte[] t, byte[] info_hash, InetSocketAddress sender) {
-		//check redis, if exists then don't reply it
-		/*if (redisTemplate.hasKey(ByteUtil.byteArrayToHex(info_hash)) ) {
-			return;
-		}*/
+
 		args.get().put("token", new byte[]{info_hash[0], info_hash[1]});
 		args.get().put("nodes", new byte[]{});
 		args.get().put("id", NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, info_hash));
@@ -181,27 +191,28 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 		if(token.length != 2 || info_hash[0] != token[0] || info_hash[1] != token[1])
 			return;
 		int port;
-		if (a.containsKey("implied_port") && ((BigInteger) a.get("implied_port")).shortValue() != 0) {
+		if (a.containsKey("implied_port") && ((Long) a.get("implied_port")).shortValue() != 0) {
 			port = sender.getPort();
 		} else {
-			port = ((BigInteger) a.get("port")).intValue();
+			port = ((Long) a.get("port")).intValue();
 		}
 
 		byte[] nodeId = NodeIdUtil.getNeighbor(DHTServer.SELF_NODE_ID, id);
 		args.get().put("id", nodeId);
 		DatagramPacket packet = createPacket(t, "r", args.get(), sender);
 		dhtServer.sendKRPC(packet);
-
 		CRC64 crc = new CRC64();
 		crc.reset();
 		crc.update(info_hash);
+		String crc64 = Long.toHexString(crc.getValue());
 		//check exists
-		if (redisTemplate.hasKey(Long.toHexString(crc.getValue()))) {
+		if (redisTemplate.hasKey(crc64)) {
 			return;
 		}
+
 		//log.error("info_hash[AnnouncePeer] : {}:{} - {}", sender.getHostString(), port, ByteUtil.byteArrayToHex(info_hash));
 		//send to kafka
-		streamBridge.send("download-out", JSONUtil.toJSONString(new DownloadMsgInfo(sender.getHostString(), port, nodeId, info_hash)).getBytes());
+		streamBridge.send("download-out", JSONUtil.toJSONString(new DownloadMsgInfo(sender.getHostString(), port, info_hash, crc64)).getBytes());
 	}
 
 	/**
@@ -212,13 +223,16 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	 * @param map
 	 * @param sender
 	 */
-	private void onResponse(Map<String, ?> map, InetSocketAddress sender) {
+	private void onResponse(Map<String, ?> map, InetSocketAddress sender) throws UnknownHostException {
 		//transaction id
 		byte[] t = (byte[]) map.get("t");
 		//由于在我们发送查询 DHT 节点请求时，构造的查询 transaction id 为字符串 find_node（见 findNode 方法），所以根据字符串判断响应请求即可
 		String type = new String(t);
 		if ("find_node".equals(type)) {
-			resolveNodes((Map) map.get("r"));
+			if (map.containsKey("r"))
+				resolveNodes((Map) map.get("r"));
+			else if (map.containsKey("e"))			//变种协议？
+				resolveNodes((Map) map.get("e"));
 		} else if ("ping".equals(type)) {
 
 		} else if ("get_peers".equals(type)) {
@@ -233,27 +247,27 @@ public class DHTServerHandler extends SimpleChannelInboundHandler<DatagramPacket
 	 *
 	 * @param r
 	 */
-	private void resolveNodes(Map r) {
+	private void resolveNodes(Map r) throws UnknownHostException {
+
+		if (r == null)
+			return;
 
 		byte[] nodes = (byte[]) r.get("nodes");
 
 		if (nodes == null)
 			return;
 
-		for (int i = 0; i < nodes.length; i += 26) {
-			try {
+		for (int i = 0; i < nodes.length / 26 * 26; i += 26) {
 				//limit the node queue size
-				if (NODES_QUEUE.size() > 15000)
-					continue;
+				/*if (NODES_QUEUE.size() > 15000)
+					continue;*/
 				InetAddress ip = InetAddress.getByAddress(new byte[]{nodes[i + 20], nodes[i + 21], nodes[i + 22], nodes[i + 23]});
 				InetSocketAddress address = new InetSocketAddress(ip, (0x0000FF00 & (nodes[i + 24] << 8)) | (0x000000FF & nodes[i + 25]));
 				byte[] nid = new byte[20];
 				System.arraycopy(nodes, i, nid, 0, 20);
 				NODES_QUEUE.offer(new Node(nid, address));
 				//log.info("get node address=[{}] ", address);
-			} catch (Exception e) {
-				log.error("", e);
-			}
+
 		}
 	}
 

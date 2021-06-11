@@ -18,6 +18,10 @@ public class TorrentService {
 	@Autowired
 	private TorrentDao torrentDao;
 
+	public long countAll() {
+		return torrentDao.countAll();
+	}
+
 	public boolean existsById(String infoHash) {
 		return torrentDao.existsById(infoHash);
 	}
@@ -39,7 +43,7 @@ public class TorrentService {
 	}
 
 	public Page<Torrent> findSimilar(Torrent torrent, Pageable pageable) {
-		return torrentDao.searchSimilar(torrent, new String[] {"fileName", "fileNameRu"}, pageable);
+		return torrentDao.searchSimilar(torrent, pageable);
 	}
 	@Transactional
 	public void upsertAndIndex(List<Torrent> torrents) {

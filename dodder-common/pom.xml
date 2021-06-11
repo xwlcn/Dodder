@@ -14,9 +14,10 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.github.pemistahl</groupId>
-            <artifactId>lingua</artifactId>
-            <version>1.0.3</version>
+            <groupId>toolgood.words</groupId>
+            <artifactId>words</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -24,22 +25,26 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>cpdetector</groupId>
-            <artifactId>cpdetector</artifactId>
-            <scope>compile</scope>
-            <version>1.0.7</version>
-        </dependency>
-        <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>toolgood.words</groupId>
-            <artifactId>words</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>compile</scope>
+            <groupId>com.optimaize.languagedetector</groupId>
+            <artifactId>language-detector</artifactId>
+            <version>0.6</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>ch.qos.logback</groupId>
+                    <artifactId>logback-classic</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
+        <!--<dependency>
+            <groupId>org.ahocorasick</groupId>
+            <artifactId>ahocorasick</artifactId>
+            <version>0.6.3</version>
+        </dependency>-->
     </dependencies>
 
 </project>

@@ -1,7 +1,6 @@
 package cc.dodder.torrent.download;
 
 import cc.dodder.common.entity.DownloadMsgInfo;
-import cc.dodder.common.util.ByteUtil;
 import cc.dodder.common.util.SensitiveWordsUtil;
 import cc.dodder.common.util.SystemClock;
 import cc.dodder.torrent.download.client.Constants;
@@ -51,7 +50,7 @@ public class TorrentDownloadServiceApplication {
 			//submit to blocking executor
 			try {
 				for(DownloadMsgInfo msgInfo: list) {
-					if (redisTemplate.hasKey(ByteUtil.byteArrayToHex(msgInfo.getInfoHash())))
+					if (redisTemplate.hasKey(msgInfo.getCrc64()))
 						continue;
 					//由于下载线程消费的速度总是比 dht server 生产的速度慢，所以要做一下时间限制，否则程序越跑越慢
 					if (SystemClock.now() - msgInfo.getTimestamp() >= Constants.MAX_LOSS_TIME) {
@@ -59,7 +58,7 @@ public class TorrentDownloadServiceApplication {
 					}
 					blockingExecutor.execute(new DownloadTask(msgInfo));
 				}
-			} catch (InterruptedException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		};

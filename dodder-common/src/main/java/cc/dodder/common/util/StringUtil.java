@@ -3,10 +3,7 @@ package cc.dodder.common.util;
 import cc.dodder.common.entity.Node;
 import cc.dodder.common.entity.Torrent;
 import cc.dodder.common.entity.Tree;
-import info.monitorenter.cpdetector.io.*;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
@@ -15,15 +12,6 @@ import java.util.List;
  * Created by Administrator on 2016/3/14.
  */
 public class StringUtil {
-
-	public static CodepageDetectorProxy detector = CodepageDetectorProxy.getInstance();
-
-	static {
-		detector.add(new ParsingDetector(false));
-		detector.add(JChardetFacade.getInstance());
-		detector.add(ASCIIDetector.getInstance());
-		detector.add(UnicodeDetector.getInstance());
-	}
 
 	public static String getMiddleString(String text, String lStr, String rStr) {
 		String result = "";
@@ -168,22 +156,6 @@ public class StringUtil {
 			rankchar = "B";
 		}
 		return new DecimalFormat("0.##").format(size) + " " + rankchar;
-	}
-
-	/**
-	 * 获取 byte[] 编码类型
-	 *
-	 * @param bytes bytes数组
-	 * @return      编码类型
-	 */
-	public static String getEncoding(byte[] bytes) {
-		String defaultEncoding = "UTF-8";
-		try(ByteArrayInputStream in = new ByteArrayInputStream(bytes)) {
-			java.nio.charset.Charset charset = detector.detectCodepage(in, bytes.length);
-			defaultEncoding = charset.name();
-		} catch (IOException e) {
-		}
-		return defaultEncoding;
 	}
 
 	/**

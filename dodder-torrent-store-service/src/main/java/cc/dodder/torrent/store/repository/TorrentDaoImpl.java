@@ -2,11 +2,14 @@ package cc.dodder.torrent.store.repository;
 
 import cc.dodder.common.entity.Torrent;
 import cc.dodder.common.request.SearchRequest;
+import cc.dodder.common.util.LanguageUtil;
 import cc.dodder.torrent.store.TorrentStoreServiceApplication;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.MoreLikeThisQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
+import org.elasticsearch.search.sort.SortBuilders;
+import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +20,7 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.aggregation.AggregatedPage;
 import org.springframework.data.elasticsearch.core.aggregation.impl.AggregatedPageImpl;
 import org.springframework.data.elasticsearch.core.document.Document;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.data.elasticsearch.core.query.UpdateQuery;
 import org.springframework.data.mongodb.core.BulkOperations;
@@ -102,16 +106,26 @@ public class TorrentDaoImpl implements TorrentDao {
         NativeSearchQueryBuilder query = new NativeSearchQueryBuilder();
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
 
-        if (request.getFileName() != null) {
-            boolQuery.must(multiMatchQuery(request.getFileName(), "fileName", "fileNameRu"));
-        } else {
-            boolQuery.must(matchAllQuery());
-        }
+        boolean ruLang = false;
+
         if (request.getFileType() != null) {
-            boolQuery.must(matchQuery("fileType", request.getFileType()));
+            boolQuery.filter(matchQuery("fileType", request.getFileType()));
         }
         if (TorrentStoreServiceApplication.filterXxx) {
-            boolQuery.must(matchQuery("isXxx", 0));
+            boolQuery.filter(termQuery("isXxx", 0));
+        }
+
+        if (request.getFileName() != null) {
+            if ("ru".equals(LanguageUtil.getLanguage(request.getFileName()))) {
+                ruLang = true;
+            }
+            query.withSort(SortBuilders.scoreSort().order(SortOrder.DESC));
+            if (ruLang)
+                boolQuery.must(matchQuery("fileNameRu", request.getFileName()).minimumShouldMatch("3<60%"));
+            else
+                boolQuery.must(matchQuery("fileName", request.getFileName()).minimumShouldMatch("3<60%"));
+        } else {
+            boolQuery.filter(matchAllQuery());
         }
         if (request.getSortBy() != null) {
             if (ASC.toString().equals(request.getOrder()))
@@ -123,26 +137,33 @@ public class TorrentDaoImpl implements TorrentDao {
         }
 
         query.withPageable(pageable)
-                .withQuery(boolQuery)
-                .withHighlightFields(new HighlightBuilder.Field("fileName"), new HighlightBuilder.Field("fileNameRu"));
+                .withQuery(boolQuery);
+        if (request.getFileName() != null) {
+            if (ruLang) {
+                query.withHighlightFields(new HighlightBuilder.Field("fileNameRu"));
+            } else {
+                query.withHighlightFields(new HighlightBuilder.Field("fileName"));
+            }
+        }
 
         SearchHits<Torrent> searchHits = elasticsearchRestTemplate.search(query.build(), Torrent.class);
-
-        for (SearchHit<Torrent> hit: searchHits) {
-            if (hit == null) continue;
-            Torrent torrent = hit.getContent();
-            if (hit.getHighlightFields().containsKey("fileName"))
-                torrent.setFileName(hit.getHighlightField("fileName").get(0));
-            if (hit.getHighlightFields().containsKey("fileNameRu"))
-                torrent.setFileName(hit.getHighlightField("fileNameRu").get(0));
-            if (torrent.getFileName() == null)
-                torrent.setFileName(torrent.getFileNameRu());
+        if (request.getFileName() != null) {
+            for (SearchHit<Torrent> hit : searchHits) {
+                if (hit == null) continue;
+                Torrent torrent = hit.getContent();
+                if (hit.getHighlightFields().containsKey("fileName"))
+                    torrent.setFileName(hit.getHighlightField("fileName").get(0));
+                if (hit.getHighlightFields().containsKey("fileNameRu"))
+                    torrent.setFileName(hit.getHighlightField("fileNameRu").get(0));
+                if (torrent.getFileName() == null)
+                    torrent.setFileName(torrent.getFileNameRu());
+            }
         }
-        //fix totalElements
+
         AggregatedPage<SearchHit<Torrent>> page = new AggregatedPageImpl<>(
                 searchHits.getSearchHits(),
                 pageable,
-                countAll(),
+                searchHits.getTotalHits(),
                 searchHits.getAggregations(),
                 null,
                 searchHits.getMaxScore());
@@ -150,16 +171,26 @@ public class TorrentDaoImpl implements TorrentDao {
     }
 
     @Override
-    public Page<Torrent> searchSimilar(Torrent torrent, String[] fields, Pageable pageable) {
-        MoreLikeThisQueryBuilder moreLikeThisQueryBuilder = QueryBuilders.moreLikeThisQuery(fields,
+    public Page<Torrent> searchSimilar(Torrent torrent, Pageable pageable) {
+        String field = "fileName";
+        if ("ru".equals(LanguageUtil.getLanguage(torrent.getFileName())))
+            field = "fileNameRu";
+        MoreLikeThisQueryBuilder moreLikeThisQueryBuilder = QueryBuilders.moreLikeThisQuery(new String[]{field},
                 new String[] {torrent.getFileName()},
                 new MoreLikeThisQueryBuilder.Item[] {new MoreLikeThisQueryBuilder.Item("torrent", torrent.getInfoHash())});
-        moreLikeThisQueryBuilder.minTermFreq(1);
-        SearchHits<Torrent> searchHits = elasticsearchRestTemplate.search(new NativeSearchQueryBuilder()
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+        if (TorrentStoreServiceApplication.filterXxx) {
+            boolQuery.must(termQuery("isXxx", 0));
+        }
+        moreLikeThisQueryBuilder.minTermFreq(1).maxQueryTerms(15);
+        NativeSearchQuery query = new NativeSearchQueryBuilder()
                 .withPageable(pageable)
-                .withQuery(moreLikeThisQueryBuilder).build(), Torrent.class);
+                .withQuery(boolQuery.must(moreLikeThisQueryBuilder)).build();
+
+        SearchHits<Torrent> searchHits = elasticsearchRestTemplate.search(query, Torrent.class);
         searchHits.stream().filter(hit -> hit.getContent().getFileNameRu() != null).forEach(hit -> hit.getContent().setFileName(hit.getContent().getFileNameRu()));
         AggregatedPage<SearchHit<Torrent>> page = SearchHitSupport.page(searchHits, pageable);
+
         return (Page<Torrent>) SearchHitSupport.unwrapSearchHits(page);
     }
 

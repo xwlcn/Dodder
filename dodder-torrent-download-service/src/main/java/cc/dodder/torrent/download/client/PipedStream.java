@@ -38,4 +38,21 @@ public class PipedStream {
 		writeStream.flush();
 		readStream.skip(readStream.available());
 	}
+
+	public void close() {
+		if (writeStream != null) {
+			try {
+				writeStream.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		if (readStream != null) {
+			try {
+				readStream.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
 }

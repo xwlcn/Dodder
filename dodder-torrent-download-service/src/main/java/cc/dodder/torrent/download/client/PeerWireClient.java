@@ -7,17 +7,16 @@ import cc.dodder.common.util.*;
 import cc.dodder.common.util.bencode.BencodingUtils;
 import cc.dodder.torrent.download.TorrentDownloadServiceApplication;
 import cc.dodder.torrent.download.util.SpringContextUtil;
-import com.github.pemistahl.lingua.api.Language;
+import ch.qos.logback.core.encoder.ByteArrayUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -42,26 +41,22 @@ public class PeerWireClient {
 	private int piece = 0;
 	private String hexHash;
 
-	private byte[] readBuff = new byte[16384];
+	private byte[] readBuff = new byte[256];
 
 	private int nextSize;
 	private NextFunction next;
 
 	private Torrent torrent;
 
-	private PipedStream cachedBuff;
+	private ByteBuf cachedBuff = Unpooled.buffer(22 * 1024);
 
+	private  int MAX_LEN = 32 * 16 * 1024;
 	private byte[] metadata;
 
 	private byte[] peerId;
 	private byte[] infoHash;
+	private String crc64;
 
-	private Set<String> types = new HashSet<>();
-	private List<Node> nodes = new ArrayList<>();
-
-	public PeerWireClient() throws IOException {
-		cachedBuff = new PipedStream();
-	}
 
 	/**
 	 * 下载完成监听器
@@ -73,17 +68,16 @@ public class PeerWireClient {
 	}
 
 
-	public void downloadMetadata(InetSocketAddress address, byte[] peerId, byte[] infoHash) {
-		this.peerId = peerId;
+	public void downloadMetadata(InetSocketAddress address, byte[] infoHash, String crc64) {
+		this.peerId = Constants.PEER_ID;
 		this.infoHash = infoHash;
-		hexHash = ByteUtil.byteArrayToHex(infoHash);
-		socket = new Socket();
+		this.crc64 = crc64;
 		try {
-			socket.connect(address, Constants.CONNECT_TIMEOUT);
+			socket = new Socket();
 			socket.setSoTimeout(Constants.READ_WRITE_TIMEOUT);
-			socket.setSoLinger(true, 0);
-			socket.setTcpNoDelay(true);
 			socket.setReuseAddress(true);
+			socket.setTcpNoDelay(true);
+			socket.connect(address, Constants.CONNECT_TIMEOUT);
 
 			in = socket.getInputStream();
 			out = socket.getOutputStream();
@@ -93,16 +87,17 @@ public class PeerWireClient {
 
 			int len = -1;
 			while (!socket.isClosed() && (len = in.read(readBuff)) != -1) {
-				cachedBuff.write(readBuff, 0, len);
+				cachedBuff.writeBytes(readBuff, 0, len);
 				handleMessage();
 			}
 		} catch (Exception e) {
+			//e.printStackTrace();
 		} finally {
-			try {
+			/*try {
 				if (onFinishedListener != null && torrent != null) {
 					onFinishedListener.accept(torrent);
 				}
-			} catch (Exception ignored) {}
+			} catch (Exception ignored) {}*/
 			destroy();
 		}
 	}
@@ -127,9 +122,10 @@ public class PeerWireClient {
 	}
 
 	private void handleMessage() throws Exception {
-		while (cachedBuff.available() >= nextSize) {
+		while (cachedBuff.readableBytes() >= nextSize) {
 			byte[] buff = new byte[nextSize];
-			cachedBuff.read(buff, 0, nextSize);
+			cachedBuff.readBytes(buff);
+			cachedBuff.discardReadBytes();
 			next.doNext(buff);
 		}
 	}
@@ -151,8 +147,34 @@ public class PeerWireClient {
 			resolvePiece(buf);
 	}
 
-	private void resolvePiece(byte[] buff) throws Exception {
+	/**
+	 * 在str1中从start位置开始查找str2到end位置结束, 返回str2在str1的起始位置, -1表示查找失败
+	 */
+	public static int strstr(byte[] str1, byte[] str2, int start, int end)
+	{
+		int index1 = start;
+		int index2 = 0;
+		if(str2!=null)
+		{
+			while(index1<str1.length && index1<end)
+			{
+				int dsite = 0;
+				while(str1[index1+dsite]==str2[index2+dsite]) {
+					if(index2+dsite+1>=str2.length)
+						return index1;
+					dsite++;
+					if(index1+dsite>=str1.length || index2+dsite>=str2.length)
+						break;
+				}
+				index1++;
+			}
+			return -1;
+		}
+		else
+			return index1;
+	}
 
+	private void resolvePiece(byte[] buff) throws Exception {
 		int pos = 1;
 		for (; pos < buff.length; pos++) {
 			if (buff[pos - 1] == 'e' && buff[pos] == 'e') {
@@ -161,18 +183,21 @@ public class PeerWireClient {
 		}
 		if (++pos > buff.length - 1) return;
 		byte[] piece_metadata = Arrays.copyOfRange(buff, pos, buff.length);
-
-		if ((piece + 1) * piece_metadata.length > 1024 * 1024) {
+		if (piece == 0 && piece_metadata[0] != 'd') {	// drop confused packet
+			destroy();
+			return;
+		}
+		if ((piece + 1) * 16 * 1024 > MAX_LEN) {
 			destroy();
 			return;
 		}
 
-		String pm = new String(piece_metadata, StandardCharsets.ISO_8859_1);
-		int piecesPos = pm.indexOf("6:pieces");
+		int piecesPos = strstr(piece_metadata, "6:pieces".getBytes(), 0, piece_metadata.length);
 		if (piecesPos > 0) {    //useless data
 			System.arraycopy(piece_metadata, 0, this.metadata, piece * 16 * 1024, piecesPos);
 			metadata[piece * 16 * 1024 + piecesPos] = 'e';
-			metadata = Arrays.copyOf(metadata, piece * 16 * 1024 + piecesPos + 1);
+			metadata[piece * 16 * 1024 + piecesPos + 1] = 'e';
+			metadata[piece * 16 * 1024 + piecesPos + 2] = 'e';
 			pieces = -1;
 			piece = 0;
 		} else {
@@ -189,20 +214,21 @@ public class PeerWireClient {
 	private void checkFinished() throws Exception {
 		if (pieces <= 0) {
 			Map map = BencodingUtils.decode(metadata);
+
 			metadata = null;
 			if (map != null) {
+
 				torrent = parseTorrent(map);
 				if (torrent != null) {
-					CRC64 crc = new CRC64();
-					crc.reset();
-					crc.update(infoHash);
-					String hexCrc = Long.toHexString(crc.getValue());
+					//System.out.println(JSONUtil.toJSONString(torrent));
+					//System.out.println(socket.getInetAddress().getHostAddress() + ":" + socket.getPort() + "   " + hexHash);
+
 					StringRedisTemplate redisTemplate = (StringRedisTemplate) SpringContextUtil.getBean(StringRedisTemplate.class);
-					if (!redisTemplate.hasKey(hexCrc)) {
+					if (!redisTemplate.hasKey(crc64)) {
 						//丢进 kafka 消息队列进行入库及索引操作
 						StreamBridge streamBridge = (StreamBridge) SpringContextUtil.getBean(StreamBridge.class);
 						streamBridge.send("download-out-0", JSONUtil.toJSONString(torrent).getBytes());
-						redisTemplate.opsForValue().set(hexCrc, "");
+						redisTemplate.opsForValue().set(crc64, "");
 					}
 					torrent = null;
 				}
@@ -279,7 +305,7 @@ public class PeerWireClient {
 		Torrent torrent = new Torrent();
 
 		if (map.containsKey("creation date"))
-			torrent.setCreateDate(((BigInteger) map.get("creation date")).longValue());
+			torrent.setCreateDate(((Long) map.get("creation date")).longValue());
 		else
 			torrent.setCreateDate(System.currentTimeMillis());
 		byte[] temp;
@@ -296,7 +322,7 @@ public class PeerWireClient {
 
 		String fn = new String(temp, encoding);
 		torrent.setFileName(fn);
-		if (LanguageUtil.getLanguage(fn) == Language.RUSSIAN) {
+		if ("ru".equals(LanguageUtil.getLanguage(fn))) {
 			torrent.setFileNameRu(fn);
 		} else {
 			torrent.setFileName(fn);
@@ -310,12 +336,13 @@ public class PeerWireClient {
 		//多文件
 		if (info.containsKey("files")) {
 			List<Map<String, Object>> list = (List<Map<String, Object>>) info.get("files");
-
+			Set<String> types = new HashSet<>();
+			List<Node> nodes = new ArrayList<>();
 			long total = 0;
 			int i = 0;
 			int cur = 1, parent = 0;
 			for (Map<String, Object> f : list) {
-				long length = ((BigInteger) f.get("length")).longValue();
+				long length = ((Long) f.get("length")).longValue();
 				total += length;
 
 				Long filesize = null;     //null 表示为文件夹
@@ -365,8 +392,10 @@ public class PeerWireClient {
 			if (sType != null && !"".equals(sType)) {
 				torrent.setFileType(sType);
 			}
+			types.clear();
+			nodes.clear();
 		} else {
-			torrent.setFileSize(((BigInteger) info.get("length")).longValue());
+			torrent.setFileSize(((Long) info.get("length")).longValue());
 
 			String type = ExtensionUtil.getExtensionType(torrent.getFileName());
 			if (type != null) {
@@ -375,7 +404,7 @@ public class PeerWireClient {
 		}
 		info.clear();
 		map.clear();
-		torrent.setInfoHash(hexHash);
+		torrent.setInfoHash(ByteArrayUtil.toHexString(infoHash));
 		return torrent;
 	}
 
@@ -387,8 +416,8 @@ public class PeerWireClient {
 			destroy();
 			return;
 		}
-		this.ut_metadata = ((BigInteger) m.get("ut_metadata")).intValue();
-		this.metadata_size = ((BigInteger) map.get("metadata_size")).intValue();
+		this.ut_metadata = ((Long) m.get("ut_metadata")).intValue();
+		this.metadata_size = ((Long) map.get("metadata_size")).intValue();
 
 		if (this.metadata_size > Constants.MAX_METADATA_SIZE) {
 			destroy();
@@ -398,7 +427,7 @@ public class PeerWireClient {
 	}
 
 	private void requestPieces() throws Exception {
-		int len = Math.min(this.metadata_size, 1024 * 1024);
+		int len = Math.min(this.metadata_size, MAX_LEN);
 		metadata = new byte[len];
 
 		pieces = (int) Math.ceil(this.metadata_size / (16.0 * 1024));
@@ -471,15 +500,10 @@ public class PeerWireClient {
 	}
 
 	private void destroy() {
+		crc64 = null;
+		peerId = null;
+		infoHash = null;
 		torrent = null;
-		types.clear();
-		nodes.clear();
-		if (socket.isConnected()) {
-			try {
-				socket.close();
-			} catch (Exception e) {
-			}
-		}
 		try {
 			if (in != null)
 				in.close();
@@ -490,12 +514,17 @@ public class PeerWireClient {
 				out.close();
 		} catch (Exception e) {
 		}
+		try {
+			socket.close();
+			socket = null;
+		} catch (Exception e) {
+		}
 		metadata = null;
 		piece = 0;
 		if (cachedBuff != null) {
 			try {
 				cachedBuff.clear();
-			} catch (IOException e) {
+			} catch (Exception e) {
 			}
 		}
 		if (map != null)

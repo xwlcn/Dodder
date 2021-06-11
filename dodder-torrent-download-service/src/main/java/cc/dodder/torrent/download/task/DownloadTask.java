@@ -2,7 +2,6 @@ package cc.dodder.torrent.download.task;
 
 import cc.dodder.common.entity.DownloadMsgInfo;
 import cc.dodder.torrent.download.client.PeerWireClient;
-import lombok.SneakyThrows;
 
 import java.net.InetSocketAddress;
 
@@ -21,14 +20,19 @@ public class DownloadTask implements Runnable {
 		this.msgInfo = msgInfo;
 	}
 
-	@SneakyThrows
 	@Override
 	public void run() {
-
-		if (wireClient.get() == null) {
-			wireClient.set(new PeerWireClient());
+		try {
+			if (wireClient.get() == null) {
+				wireClient.set(new PeerWireClient());
+			}
+			wireClient.get().downloadMetadata(new InetSocketAddress(msgInfo.getIp(), msgInfo.getPort()), msgInfo.getInfoHash(), msgInfo.getCrc64());
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			msgInfo = null;
 		}
-		wireClient.get().downloadMetadata(new InetSocketAddress(msgInfo.getIp(), msgInfo.getPort()), msgInfo.getNodeId(), msgInfo.getInfoHash());
 	}
+
 
 }

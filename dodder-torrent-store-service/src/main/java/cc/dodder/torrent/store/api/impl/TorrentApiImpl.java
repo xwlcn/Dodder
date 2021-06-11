@@ -41,6 +41,7 @@ public class TorrentApiImpl implements TorrentApi {
 				.total(torrents.getTotalElements())
 				.page(request.getPage())
 				.limit(request.getLimit())
+				.dbTotal(torrentService.countAll())
 				.build());
 		return result;
 	}

@@ -15,4 +15,6 @@ public class TorrentPageVO implements Serializable {
 	private Long total;
 	private Integer page;
 	private Integer limit;
+
+	private Long dbTotal;
 }

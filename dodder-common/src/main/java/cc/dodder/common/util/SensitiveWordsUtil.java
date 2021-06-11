@@ -65,7 +65,7 @@ public class SensitiveWordsUtil {
     }
 
     public static void main(String[] args) {
-        System.out.println(SensitiveWordsUtil.getInstance().replace("Inception (2010) 1080p Brrip Hevc 10bit.mkv"));
+        System.out.println(SensitiveWordsUtil.getInstance().replace("操逼 强奸多斯拉克  class所担负的顺丰速递所担AV电影负的顺丰速递"));
     }
 
 }

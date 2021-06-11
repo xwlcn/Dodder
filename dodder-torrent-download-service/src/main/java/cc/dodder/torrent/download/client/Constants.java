@@ -11,6 +11,7 @@ public class Constants {
 	};
 
 	public static final byte[] EXT_HANDSHAKE_DATA = "d1:md11:ut_metadatai1eee".getBytes();
+	public static String EXT_REQUEST_PIECE_MSG = "d8:msg_typei0e5:piecei#ee";
 
 	public static final byte BT_MSG_ID = 20 & 0xff;
 	public static final int EXT_HANDSHAKE_ID = 0;

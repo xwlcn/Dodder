@@ -48,3 +48,7 @@ download:
   num:
     thread: 3000
   enable-filter-sensitive-words: true     #是否开启过滤敏感词
+
+logging:
+  level:
+    root: info

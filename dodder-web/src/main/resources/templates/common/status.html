@@ -5,7 +5,7 @@
         <div class="layui-card-header">资源抓取状态</div>
         <div class="layui-card-body dodder-resource-status">
             <p>文件类型：<span th:text="${#strings.isEmpty(searchRequest.fileType) ? '全部' : searchRequest.fileType}" th:remove="tag"></span></p>
-            <p>资源总数：<b style="color: red" th:text="${result.data.total}"></b></p>
+            <p>资源总数：<b style="color: red" th:text="${result.data.dbTotal}"></b></p>
         </div>
     </div>
 </div>
